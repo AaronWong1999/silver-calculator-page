@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>白银期货：动态风控策略计算器 v2.1</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1c1917 0%, #292524 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #e7e5e4;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        h1 { text-align: center; margin-bottom: 8px; font-size: 26px; color: #facc15; font-weight: 800; letter-spacing: -0.5px; }
+        .subtitle { text-align: center; color: #a8a29e; margin-bottom: 25px; font-size: 14px; }
+        
+        /* 顶部配置栏 */
+        .config-panel {
+            background: rgba(30, 41, 59, 0.8);
+            border: 2px solid #3b82f6;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 30px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            flex-wrap: wrap;
+        }
+        .config-item { display: flex; align-items: center; gap: 10px; }
+        .config-label { font-size: 16px; color: #93c5fd; font-weight: bold; }
+        .config-input { 
+            background: #0f172a; border: 1px solid #3b82f6; color: #fff; 
+            padding: 8px 12px; border-radius: 6px; font-size: 18px; width: 100px; text-align: center; font-weight: bold;
+        }
+        .mode-btn {
+            padding: 8px 16px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; transition: all 0.2s;
+        }
+        .btn-safe { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid #10b981; }
+        .btn-safe.active { background: #10b981; color: #fff; }
+        .btn-agg { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid #ef4444; }
+        .btn-agg.active { background: #ef4444; color: #fff; }
+
+        /* 场景选择器 */
+        .scenario-switch {
+            display: flex; background: rgba(0,0,0,0.3); border-radius: 8px; padding: 2px; border: 1px solid rgba(255,255,255,0.1); margin-left: 15px;
+        }
+        .scenario-opt {
+            padding: 6px 15px; cursor: pointer; border-radius: 6px; font-size: 13px; color: #a8a29e; transition: all 0.2s;
+        }
+        .scenario-opt:hover { color: #fff; }
+        .scenario-opt.active { background: #3b82f6; color: #fff; font-weight: bold; }
+
+        /* 状态栏 */
+        .alert-box {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-left: 5px solid #a8a29e;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 30px;
+            transition: all 0.3s;
+        }
+        .alert-box.safe-mode { border-left-color: #10b981; background: rgba(16, 185, 129, 0.1); }
+        .alert-box.agg-mode { border-left-color: #ef4444; background: rgba(239, 68, 68, 0.1); }
+
+        .strategy-section { 
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 30px; 
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .section-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .section-title { font-size: 20px; color: #facc15; font-weight: 700; display: flex; align-items: center; }
+        
+        .params-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px;
+        }
+        .param-box {
+            background: rgba(0,0,0,0.2); border-radius: 8px; padding: 12px; text-align: center; border: 1px solid rgba(255,255,255,0.05);
+        }
+        .param-box .label { color: #78716c; font-size: 11px; margin-bottom: 4px; text-transform: uppercase; }
+        .param-box .value { color: #fff; font-size: 15px; font-weight: 700; font-family: 'SF Mono', monospace; }
+
+        .formula-box {
+            background: rgba(59, 130, 246, 0.1); border-left: 4px solid #3b82f6;
+            padding: 15px; margin-bottom: 20px; font-size: 13px; color: #dbeafe; border-radius: 0 8px 8px 0;
+        }
+        .formula-box code { background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px; color: #ffd700; }
+
+        table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; }
+        th {
+            background: #292524; padding: 12px 8px; text-align: center; color: #a8a29e;
+            font-weight: 600; font-size: 11px; text-transform: uppercase; border-bottom: 1px solid #44403c;
+        }
+        td { padding: 10px 8px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05); font-variant-numeric: tabular-nums; }
+        
+        .row-history { background: rgba(107, 114, 128, 0.1); color: #a8a29e; }
+        .row-current { background: rgba(239, 68, 68, 0.1); color: #fff; font-weight: bold; border: 1px solid #ef4444; }
+        .row-future { background: rgba(255, 255, 255, 0.02); }
+        .row-trigger { background: rgba(16, 185, 129, 0.15); color: #4ade80; font-weight: bold; }
+        .row-ideal { background: rgba(59, 130, 246, 0.05); color: #93c5fd; font-style: italic; }
+        
+        .txt-red { color: #ef4444; }
+        .txt-green { color: #4ade80; }
+        .txt-yellow { color: #facc15; }
+        .txt-blue { color: #60a5fa; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>白银期货：动态风控策略计算器 v2.1</h1>
+        <p class="subtitle">一份代码，平行宇宙。调整抗跌系数，对比理想与现实。</p>
+
+        <!-- 核心配置区 -->
+        <div class="config-panel">
+            <div class="config-item">
+                <span class="config-label">设定抗跌回撤:</span>
+                <input type="number" id="safetyRate" class="config-input" value="15" step="1" min="5" max="50" onchange="recalc()">
+                <span class="config-label">%</span>
+            </div>
+            <div class="config-item">
+                <span class="config-label">国内保证金:</span>
+                <input type="number" id="cnMarginRate" class="config-input" value="16" step="1" onchange="recalc()">
+                <span class="config-label">%</span>
+            </div>
+            <div class="config-item">
+                <span class="config-label">MooMoo保证金:</span>
+                <input type="number" id="mooMargin" class="config-input" value="7150" step="50" onchange="recalc()">
+                <span class="config-label">$</span>
+            </div>
+            <div class="config-item">
+                <button class="mode-btn btn-agg" onclick="setMode(10)">🔥 激进 (10%)</button>
+                <button class="mode-btn btn-safe active" onclick="setMode(15)">🛡️ 稳健 (15%)</button>
+            </div>
+        </div>
+
+        <div id="alertBox" class="alert-box"></div>
+
+        <!-- 国内版 -->
+        <div class="strategy-section">
+            <div class="section-header">
+                <div class="section-title">
+                    国内版（上期所 AG）
+                    <div class="scenario-switch">
+                        <div id="cn-scen-real" class="scenario-opt active" onclick="setScenario('cn', 'real')">🔴 现实模式</div>
+                        <div id="cn-scen-ideal" class="scenario-opt" onclick="setScenario('cn', 'ideal')">🔵 理想模式</div>
+                    </div>
+                </div>
+                <div id="cn-status" class="section-status"></div>
+            </div>
+            <div class="params-grid">
+                <div class="param-box"><div class="label">持仓手数</div><div class="value" id="cn-curr-lots">5手</div></div>
+                <div class="param-box"><div class="label">当前净值</div><div class="value" id="cn-curr-equity">¥258,865</div></div>
+                <div class="param-box"><div class="label">爆仓价格</div><div class="value danger" id="cn-boom-price">-</div></div>
+                <div class="param-box"><div class="label">下个加仓价</div><div class="value highlight" id="cn-next-price">-</div></div>
+                <div class="param-box"><div class="label">最终收益</div><div class="value" id="cn-final-equity">-</div></div>
+            </div>
+            <div class="formula-box" id="cn-formula"></div>
+            <table id="cn-table">
+                <thead>
+                    <tr>
+                        <th>轮次</th><th>状态</th><th>触发价格</th><th>操作</th><th>总持仓</th><th>持仓均价</th><th>账户余额</th>
+                        <th>爆仓价</th><th>需补保</th><th>抗跌能力</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <!-- MooMoo版 -->
+        <div class="strategy-section">
+            <div class="section-header">
+                <div class="section-title">
+                    MooMoo版（COMEX SIL 1000oz）
+                    <div class="scenario-switch">
+                        <div id="moo-scen-real" class="scenario-opt active" onclick="setScenario('moo', 'real')">🔴 现实模式</div>
+                        <div id="moo-scen-ideal" class="scenario-opt" onclick="setScenario('moo', 'ideal')">🔵 理想模式</div>
+                    </div>
+                </div>
+                <div id="moo-status" class="section-status"></div>
+            </div>
+            <div class="params-grid">
+                <div class="param-box"><div class="label">持仓手数</div><div class="value" id="moo-curr-lots">2手</div></div>
+                <div class="param-box"><div class="label">当前净值</div><div class="value" id="moo-curr-equity">$22,346</div></div>
+                <div class="param-box"><div class="label">爆仓价格</div><div class="value danger" id="moo-boom-price">-</div></div>
+                <div class="param-box"><div class="label">下个加仓价</div><div class="value highlight" id="moo-next-price">-</div></div>
+                <div class="param-box"><div class="label">最终收益</div><div class="value" id="moo-final-equity">-</div></div>
+            </div>
+            <div class="formula-box" id="moo-formula"></div>
+            <table id="moo-table">
+                <thead>
+                    <tr>
+                        <th>轮次</th><th>状态</th><th>触发价格</th><th>操作</th><th>总持仓</th><th>持仓均价</th><th>账户余额</th>
+                        <th>爆仓价</th><th>需补保</th><th>抗跌能力</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // === 基础数据配置 ===
+        const HISTORY = {
+            cn: [
+                { round: 1, price: 15869, lots: 3, equity: 243414, note: "初始入金" },
+                { round: 2, price: 16785, lots: 4, equity: 284619, note: "盈利滚仓" },
+                { round: 3, price: 17416, lots: 4, equity: 322477, note: "持有观望" },
+                { round: 4, price: 17979, lots: 5, equity: 356272, note: "激进加仓期" }
+            ],
+            moo: [
+                { round: 1, price: 69.00, lots: 1, equity: 12984, note: "初始入金" },
+                { round: 2, price: 75.90, lots: 2, equity: 19884, note: "盈利滚仓" }
+            ]
+        };
+
+        const CONFIG = {
+            cn: {
+                startPrice: 15869, startEquity: 243414, startLots: 3,
+                currentPrice: 19330, currentEquity: 396341, currentLots: 5, currentAvgPrice: 18710,
+                marginRate: 0.16, contractSize: 15,
+                boomCoef: 0.84
+            },
+            moo: {
+                startPrice: 69.00, startEquity: 12984, startLots: 1,
+                currentPrice: 77.675, currentEquity: 35746.18, currentLots: 2, currentAvgPrice: 76.245,
+                maintainMargin: 7150, contractSize: 1000,
+                boomConst: 7.15
+            }
+        };
+
+        let state = {
+            cn: 'real',
+            moo: 'real'
+        };
+
+        // === 核心计算逻辑 ===
+        function calculateScenario(type, mode, safetyRate) {
+            let data = [];
+            let p, eq, lots, avg;
+            let cfg = CONFIG[type];
+
+            if (mode === 'real') {
+                // 现实模式：先填入历史数据
+                let tempAvg = 0;
+                HISTORY[type].forEach((h, idx) => {
+                    if (idx === 0) {
+                        tempAvg = h.price;
+                    } else {
+                        let prevH = HISTORY[type][idx-1];
+                        let diff = h.lots - prevH.lots;
+                        if (diff > 0) {
+                            // 只有加仓时才更新均价
+                            tempAvg = (tempAvg * prevH.lots + h.price * diff) / h.lots;
+                        }
+                    }
+
+                    data.push({
+                        round: h.round, type: 'history', price: h.price, equity: h.equity, lots: h.lots,
+                        avgPrice: tempAvg,
+                        note: h.note
+                    });
+                });
+
+                // 接着填入当前状态
+                p = cfg.currentPrice;
+                eq = cfg.currentEquity;
+                lots = cfg.currentLots;
+                
+                // 当前状态是基于上一条历史的延续，没有新操作，所以均价维持不变
+                avg = tempAvg; 
+
+                data.push({
+                    round: HISTORY[type].length + 1, type: 'current', price: p, equity: eq, lots: lots,
+                    avgPrice: avg,
+                    note: '实际持仓(亏损)'
+                });
+            } else {
+                // 理想模式：从头开始
+                p = cfg.startPrice;
+                eq = cfg.startEquity;
+                lots = cfg.startLots;
+                avg = p;
+                
+                data.push({
+                    round: 1, type: 'history', price: p, equity: eq, lots: lots,
+                    avgPrice: avg,
+                    note: '理想开局'
+                });
+            }
+
+            // 向后推演30轮
+            let maxRounds = 30;
+            // 起始轮次编号
+            let startRoundNum = mode === 'real' ? (HISTORY[type].length + 2) : 2;
+
+            for(let i=0; i<maxRounds; i++) {
+                let nextLots = lots + 1;
+                let nextPrice = 0;
+
+                // 计算下一手触发价
+                if (type === 'cn') {
+                    let K = (safetyRate/100) + (1 - safetyRate/100) * cfg.marginRate;
+                    let num = eq - (lots * 15 * p);
+                    let den = (nextLots * 15 * K) - (lots * 15);
+                    nextPrice = num / den;
+                } else {
+                    let S = safetyRate / 100;
+                    let num = eq - (lots * 1000 * p) - (nextLots * cfg.maintainMargin);
+                    let den = (nextLots * 1000 * S) - (lots * 1000);
+                    nextPrice = num / den;
+                }
+
+                if (nextPrice <= p) nextPrice = p;
+
+                // 更新余额
+                let newEq = 0;
+                if(type === 'cn') newEq = eq + (nextPrice - p) * lots * 15;
+                else newEq = eq + (nextPrice - p) * lots * 1000;
+
+                // 更新均价: (旧均价*旧手数 + 新价格*1) / 新手数
+                // 这里的逻辑假设每次只加1手，符合循环前提 nextLots = lots + 1
+                let newAvg = (avg * lots + nextPrice * 1) / nextLots;
+
+                // 记录数据
+                data.push({
+                    round: startRoundNum + i,
+                    type: 'future',
+                    price: nextPrice,
+                    equity: newEq,
+                    lots: nextLots,
+                    avgPrice: newAvg,
+                    note: nextPrice <= p ? '立即加仓' : '等待加仓'
+                });
+
+                p = nextPrice;
+                eq = newEq;
+                lots = nextLots;
+                avg = newAvg;
+
+                if (type === 'cn' && p > 32000) break;
+                if (type === 'moo' && p > 140) break;
+            }
+            return data;
+        }
+
+        function calcRisk(type, price, equity, lots, safetyRate) {
+            let boomPrice = 0;
+            let marginCall = 0;
+            let cfg = CONFIG[type];
+
+            if (type === 'cn') {
+                boomPrice = (15 * lots * price - equity) / (15 * lots * cfg.boomCoef);
+                let K = (safetyRate/100) + (1 - safetyRate/100) * cfg.marginRate;
+                let target = lots * 15 * price * K;
+                marginCall = target - equity;
+            } else {
+                boomPrice = cfg.boomConst + price - equity/(1000*lots);
+                let S = safetyRate / 100;
+                let target = lots * (cfg.maintainMargin + 1000 * price * S);
+                marginCall = target - equity;
+            }
+            
+            let safePercent = (price - boomPrice) / price * 100;
+            return { boomPrice, marginCall, safePercent };
+        }
+
+        // === 渲染与交互 ===
+        function renderTable(type) {
+            const safetyRate = parseFloat(document.getElementById('safetyRate').value);
+            const mode = state[type];
+            const dataset = calculateScenario(type, mode, safetyRate);
+            
+            let html = '';
+            let finalRow = null;
+            let nextAction = null;
+
+            dataset.forEach((row, idx) => {
+                if (idx > 0 && row.price === dataset[idx-1].price && row.lots === dataset[idx-1].lots) return;
+
+                let risk = calcRisk(type, row.price, row.equity, row.lots, safetyRate);
+                let isCurrent = row.type === 'current';
+                
+                let rowClass = isCurrent ? 'row-current' : (mode === 'ideal' ? 'row-ideal' : 'row-future');
+                if (row.type === 'history') rowClass = 'row-history';
+                if (row.note === '立即加仓') rowClass = 'row-trigger';
+
+                let cur = type === 'cn' ? '¥' : '$';
+                let mcTxt = risk.marginCall > 0 ? 
+                    `<span class="txt-red">+${cur}${Math.round(risk.marginCall).toLocaleString()}</span>` : 
+                    `<span class="txt-green">✔</span>`;
+
+                html += `<tr class="${rowClass}">
+                    <td>${typeof row.round === 'number' ? row.round : '-'}</td>
+                    <td>${isCurrent ? '当前' : (row.type === 'history' ? '已执行' : (row.price <= CONFIG[type].currentPrice && mode === 'real' ? '已过' : '待执行'))}</td>
+                    <td>${cur}${row.price.toLocaleString(undefined, {maximumFractionDigits: type==='cn'?0:2})}</td>
+                    <td>${row.type==='current' ? '持仓' : (row.type==='history' ? '持有'+row.lots+'手' : '开第'+row.lots+'手')}</td>
+                    <td>${row.lots}手</td>
+                    <td class="txt-blue">${cur}${row.avgPrice.toLocaleString(undefined, {maximumFractionDigits: type==='cn'?0:2})}</td>
+                    <td>${cur}${Math.round(row.equity).toLocaleString()}</td>
+                    <td class="txt-red">${cur}${risk.boomPrice.toLocaleString(undefined, {maximumFractionDigits: type==='cn'?0:2})}</td>
+                    <td>${mcTxt}</td>
+                    <td class="${risk.safePercent < safetyRate ? 'txt-red' : 'txt-green'}">${risk.safePercent.toFixed(1)}%</td>
+                </tr>`;
+
+                finalRow = row;
+                if (!nextAction && row.type === 'future') nextAction = row;
+            });
+
+            document.querySelector(`#${type}-table tbody`).innerHTML = html;
+            
+            let cur = type === 'cn' ? '¥' : '$';
+            let currRisk = calcRisk(type, mode==='real'?CONFIG[type].currentPrice:CONFIG[type].startPrice, mode==='real'?CONFIG[type].currentEquity:CONFIG[type].startEquity, mode==='real'?CONFIG[type].currentLots:CONFIG[type].startLots, safetyRate);
+            
+            document.getElementById(`${type}-curr-lots`).innerText = (mode==='real'?CONFIG[type].currentLots:CONFIG[type].startLots) + '手';
+            document.getElementById(`${type}-curr-equity`).innerText = cur + Math.round(mode==='real'?CONFIG[type].currentEquity:CONFIG[type].startEquity).toLocaleString();
+            document.getElementById(`${type}-boom-price`).innerText = cur + currRisk.boomPrice.toLocaleString(undefined, {maximumFractionDigits: type==='cn'?0:2});
+            document.getElementById(`${type}-next-price`).innerText = nextAction ? cur + nextAction.price.toLocaleString(undefined, {maximumFractionDigits: type==='cn'?0:2}) : '已通关';
+            document.getElementById(`${type}-final-equity`).innerText = cur + Math.round(finalRow.equity).toLocaleString();
+        }
+
+        function setMode(val) {
+            document.getElementById('safetyRate').value = val;
+            recalc();
+        }
+
+        function setScenario(type, mode) {
+            state[type] = mode;
+            document.getElementById(`${type}-scen-real`).className = mode === 'real' ? 'scenario-opt active' : 'scenario-opt';
+            document.getElementById(`${type}-scen-ideal`).className = mode === 'ideal' ? 'scenario-opt active' : 'scenario-opt';
+            renderTable(type);
+        }
+
+        function recalc() {
+            // 更新配置
+            const cnRate = parseFloat(document.getElementById('cnMarginRate').value) || 16;
+            CONFIG.cn.marginRate = cnRate / 100;
+            CONFIG.cn.boomCoef = 1 - CONFIG.cn.marginRate;
+
+            const mooMargin = parseFloat(document.getElementById('mooMargin').value) || 7150;
+            CONFIG.moo.maintainMargin = mooMargin;
+            CONFIG.moo.boomConst = mooMargin / 1000;
+
+            const safetyRate = parseFloat(document.getElementById('safetyRate').value);
+            const isSafeMode = safetyRate >= 15;
+            
+            document.querySelector('.btn-safe').className = isSafeMode ? 'mode-btn btn-safe active' : 'mode-btn btn-safe';
+            document.querySelector('.btn-agg').className = !isSafeMode ? 'mode-btn btn-agg active' : 'mode-btn btn-agg';
+            
+            const alertBox = document.getElementById('alertBox');
+            alertBox.className = isSafeMode ? 'alert-box safe-mode' : 'alert-box agg-mode';
+            alertBox.innerHTML = isSafeMode ? 
+                `<h3>🛡️ 稳健模式 (${safetyRate}%)</h3><p>已启用高安全边际计算。表格新增了【爆仓价】和【需补保】列，请重点关注红色数字。</p>` :
+                `<h3>🔥 激进模式 (${safetyRate}%)</h3><p>追求极致效率。注意观察【需补保】列，正数表示您当前资金不足以支撑此安全回撤，需要入金。</p>`;
+
+            renderTable('cn');
+            renderTable('moo');
+        }
+
+        window.onload = recalc;
+    </script>
+</body>
+</html>
