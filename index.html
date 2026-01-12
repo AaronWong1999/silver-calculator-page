@@ -129,7 +129,7 @@
             </div>
             <div class="config-item">
                 <span class="config-label">国内保证金:</span>
-                <input type="number" id="cnMarginRate" class="config-input" value="15.9" step="0.1" onchange="recalc()">
+                <input type="number" id="cnMarginRate" class="config-input" value="14.7" step="0.1" onchange="recalc()">
                 <span class="config-label">%</span>
             </div>
             <div class="config-item">
@@ -159,7 +159,7 @@
             </div>
             <div class="params-grid">
                 <div class="param-box"><div class="label">持仓手数</div><div class="value" id="cn-curr-lots">5手</div></div>
-                <div class="param-box"><div class="label">当前净值</div><div class="value" id="cn-curr-equity">¥258,865</div></div>
+                <div class="param-box"><div class="label">当前净值</div><div class="value" id="cn-curr-equity">¥510,450</div></div>
                 <div class="param-box"><div class="label">爆仓价格</div><div class="value danger" id="cn-boom-price">-</div></div>
                 <div class="param-box"><div class="label">下个加仓价</div><div class="value highlight" id="cn-next-price">-</div></div>
                 <div class="param-box"><div class="label">最终收益</div><div class="value" id="cn-final-equity">-</div></div>
@@ -190,7 +190,7 @@
             </div>
             <div class="params-grid">
                 <div class="param-box"><div class="label">持仓手数</div><div class="value" id="moo-curr-lots">2手</div></div>
-                <div class="param-box"><div class="label">当前净值</div><div class="value" id="moo-curr-equity">$22,346</div></div>
+                <div class="param-box"><div class="label">当前净值</div><div class="value" id="moo-curr-equity">$47,016</div></div>
                 <div class="param-box"><div class="label">爆仓价格</div><div class="value danger" id="moo-boom-price">-</div></div>
                 <div class="param-box"><div class="label">下个加仓价</div><div class="value highlight" id="moo-next-price">-</div></div>
                 <div class="param-box"><div class="label">最终收益</div><div class="value" id="moo-final-equity">-</div></div>
@@ -215,7 +215,8 @@
                 { round: 1, price: 15869, lots: 3, equity: 243414, note: "初始入金" },
                 { round: 2, price: 16785, lots: 4, equity: 284619, note: "盈利滚仓" },
                 { round: 3, price: 17416, lots: 4, equity: 322477, note: "持有观望" },
-                { round: 4, price: 17979, lots: 5, equity: 356272, note: "激进加仓期" }
+                { round: 4, price: 17979, lots: 5, equity: 356272, note: "激进加仓期" },
+                { round: 5, price: 20790, lots: 5, equity: 510449, note: "调整持仓" }
             ],
             moo: [
                 { round: 1, price: 69.00, lots: 1, equity: 12984, note: "初始入金" },
@@ -226,13 +227,13 @@
         const CONFIG = {
             cn: {
                 startPrice: 15869, startEquity: 243414, startLots: 3,
-                currentPrice: 18955, currentEquity: 371956, currentLots: 5, currentAvgPrice: 18790,
-                marginRate: 0.159, contractSize: 15,
-                boomCoef: 0.841
+                currentPrice: 20810, currentEquity: 512789.24, currentLots: 6, currentAvgPrice: 19463,
+                marginRate: 0.147, contractSize: 15,
+                boomCoef: 0.853
             },
             moo: {
                 startPrice: 69.00, startEquity: 12984, startLots: 1,
-                currentPrice: 77.115, currentEquity: 34626.18, currentLots: 2, currentAvgPrice: 76.245,
+                currentPrice: 83.39, currentEquity: 47016.18, currentLots: 2, currentAvgPrice: 76.245,
                 maintainMargin: 7150, contractSize: 1000,
                 boomConst: 7.15
             }
