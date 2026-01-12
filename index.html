@@ -277,8 +277,13 @@
                 eq = cfg.currentEquity;
                 lots = cfg.currentLots;
                 
-                // 当前状态是基于上一条历史的延续，没有新操作，所以均价维持不变
-                avg = tempAvg; 
+                // 修正：如果当前手数多于历史最后一手，说明在当前价有加仓，需要更新均价
+                let lastHistoryLots = HISTORY[type][HISTORY[type].length - 1].lots;
+                if (lots > lastHistoryLots) {
+                    avg = (tempAvg * lastHistoryLots + p * (lots - lastHistoryLots)) / lots;
+                } else {
+                    avg = tempAvg; 
+                }
 
                 data.push({
                     round: HISTORY[type].length + 1, type: 'current', price: p, equity: eq, lots: lots,
