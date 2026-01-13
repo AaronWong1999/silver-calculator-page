@@ -129,7 +129,7 @@
             </div>
             <div class="config-item">
                 <span class="config-label">国内保证金:</span>
-                <input type="number" id="cnMarginRate" class="config-input" value="14.7" step="0.1" onchange="recalc()">
+                <input type="number" id="cnMarginRate" class="config-input" value="15.2" step="0.1" onchange="recalc()">
                 <span class="config-label">%</span>
             </div>
             <div class="config-item">
@@ -216,7 +216,8 @@
                 { round: 2, price: 16785, lots: 4, equity: 284619, note: "盈利滚仓" },
                 { round: 3, price: 17416, lots: 4, equity: 322477, note: "持有观望" },
                 { round: 4, price: 17979, lots: 5, equity: 356272, note: "激进加仓期" },
-                { round: 5, price: 20790, lots: 5, equity: 510449, note: "调整持仓" }
+                { round: 5, price: 20790, lots: 5, equity: 510449, note: "调整持仓" },
+                { round: 6, price: 20810, lots: 6, equity: 512789, note: "稳健加仓" }
             ],
             moo: [
                 { round: 1, price: 69.00, lots: 1, equity: 12984, note: "初始入金" },
@@ -227,9 +228,9 @@
         const CONFIG = {
             cn: {
                 startPrice: 15869, startEquity: 243414, startLots: 3,
-                currentPrice: 20810, currentEquity: 512789.24, currentLots: 6, currentAvgPrice: 19463,
-                marginRate: 0.147, contractSize: 15,
-                boomCoef: 0.853
+                currentPrice: 22280, currentEquity: 642177.52, currentLots: 7, currentAvgPrice: 19861,
+                marginRate: 0.1524, contractSize: 15,
+                boomCoef: 0.8476
             },
             moo: {
                 startPrice: 69.00, startEquity: 12984, startLots: 1,
