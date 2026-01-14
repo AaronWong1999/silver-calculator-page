@@ -134,8 +134,8 @@
             </div>
             <div class="config-item">
                 <span class="config-label">MooMoo保证金:</span>
-                <input type="number" id="mooMargin" class="config-input" value="8548" step="50" onchange="recalc()">
-                <span class="config-label">$</span>
+                <input type="number" id="mooMarginRate" class="config-input" value="9.5" step="0.1" onchange="recalc()">
+                <span class="config-label">%</span>
             </div>
             <div class="config-item">
                 <button class="mode-btn btn-agg" onclick="setMode(10)">🔥 激进 (10%)</button>
@@ -220,9 +220,8 @@
                 { round: 6, price: 20810, lots: 6, equity: 512789, note: "稳健加仓" }
             ],
             moo: [
-                { round: 1, price: 69.00, lots: 1, equity: 12984, note: "初始入金" },
-                { round: 2, price: 75.90, lots: 2, equity: 19884, note: "盈利滚仓" },
-                { round: 3, price: 87.625, lots: 3, equity: 55646, note: "激进加仓(高风险)" }
+                { round: 1, price: 76.245, lots: 2, equity: 19884, note: "初始持仓" },
+                { round: 2, price: 90.95, lots: 3, equity: 59593, note: "高位加仓" }
             ]
         };
 
@@ -234,10 +233,10 @@
                 boomCoef: 0.8476
             },
             moo: {
-                startPrice: 69.00, startEquity: 12984, startLots: 1,
+                startPrice: 76.245, startEquity: 19884, startLots: 2,
                 currentPrice: 90.055, currentEquity: 59593.17, currentLots: 3, currentAvgPrice: 81.147,
-                maintainMargin: 8548, contractSize: 1000,
-                boomConst: 8.548
+                marginRate: 0.095, contractSize: 1000,
+                boomCoef: 0.905
             }
         };
 
@@ -315,25 +314,17 @@
                 let nextLots = lots + 1;
                 let nextPrice = 0;
 
-                // 计算下一手触发价
-                if (type === 'cn') {
-                    let K = (safetyRate/100) + (1 - safetyRate/100) * cfg.marginRate;
-                    let num = eq - (lots * 15 * p);
-                    let den = (nextLots * 15 * K) - (lots * 15);
-                    nextPrice = num / den;
-                } else {
-                    let S = safetyRate / 100;
-                    let num = eq - (lots * 1000 * p) - (nextLots * cfg.maintainMargin);
-                    let den = (nextLots * 1000 * S) - (lots * 1000);
-                    nextPrice = num / den;
-                }
+                // 统一使用百分比逻辑计算
+                let sz = cfg.contractSize;
+                let K = (safetyRate/100) + (1 - safetyRate/100) * cfg.marginRate;
+                let num = eq - (lots * sz * p);
+                let den = (nextLots * sz * K) - (lots * sz);
+                nextPrice = num / den;
 
                 if (nextPrice <= p) nextPrice = p;
 
                 // 更新余额
-                let newEq = 0;
-                if(type === 'cn') newEq = eq + (nextPrice - p) * lots * 15;
-                else newEq = eq + (nextPrice - p) * lots * 1000;
+                let newEq = eq + (nextPrice - p) * lots * sz;
 
                 // 更新均价: (旧均价*旧手数 + 新价格*1) / 新手数
                 // 这里的逻辑假设每次只加1手，符合循环前提 nextLots = lots + 1
@@ -365,18 +356,21 @@
             let boomPrice = 0;
             let marginCall = 0;
             let cfg = CONFIG[type];
+            let sz = cfg.contractSize;
 
-            if (type === 'cn') {
-                boomPrice = (15 * lots * price - equity) / (15 * lots * cfg.boomCoef);
-                let K = (safetyRate/100) + (1 - safetyRate/100) * cfg.marginRate;
-                let target = lots * 15 * price * K;
-                marginCall = target - equity;
-            } else {
-                boomPrice = cfg.boomConst + price - equity/(1000*lots);
-                let S = safetyRate / 100;
-                let target = lots * (cfg.maintainMargin + 1000 * price * S);
-                marginCall = target - equity;
-            }
+            // 统一风险计算逻辑（百分比）
+            // 爆仓价计算：净值 <= 维持保证金
+            // Equity - Loss = Margin
+            // Equity - (CurrentPrice - BoomPrice)*Lots*Sz = BoomPrice*Lots*Sz*MarginRate
+            // => Equity - CurrentPrice*Lots*Sz + BoomPrice*Lots*Sz = BoomPrice*Lots*Sz*MarginRate
+            // => BoomPrice*Lots*Sz*(1 - MarginRate) = CurrentPrice*Lots*Sz - Equity
+            // => BoomPrice = (CurrentPrice*Lots*Sz - Equity) / (Lots*Sz*(1 - MarginRate))
+            
+            boomPrice = (sz * lots * price - equity) / (sz * lots * (1 - cfg.marginRate));
+            
+            let K = (safetyRate/100) + (1 - safetyRate/100) * cfg.marginRate;
+            let target = lots * sz * price * K;
+            marginCall = target - equity;
             
             let safePercent = (price - boomPrice) / price * 100;
             return { boomPrice, marginCall, safePercent };
@@ -454,9 +448,9 @@
             CONFIG.cn.marginRate = cnRate / 100;
             CONFIG.cn.boomCoef = 1 - CONFIG.cn.marginRate;
 
-            const mooMargin = parseFloat(document.getElementById('mooMargin').value) || 7150;
-            CONFIG.moo.maintainMargin = mooMargin;
-            CONFIG.moo.boomConst = mooMargin / 1000;
+            const mooMarginRate = parseFloat(document.getElementById('mooMarginRate').value) || 9.5;
+            CONFIG.moo.marginRate = mooMarginRate / 100;
+            CONFIG.moo.boomCoef = 1 - CONFIG.moo.marginRate;
 
             const safetyRate = parseFloat(document.getElementById('safetyRate').value);
             const isSafeMode = safetyRate >= 15;
