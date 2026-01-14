@@ -134,7 +134,7 @@
             </div>
             <div class="config-item">
                 <span class="config-label">MooMoo保证金:</span>
-                <input type="number" id="mooMargin" class="config-input" value="7150" step="50" onchange="recalc()">
+                <input type="number" id="mooMargin" class="config-input" value="8548" step="50" onchange="recalc()">
                 <span class="config-label">$</span>
             </div>
             <div class="config-item">
@@ -221,7 +221,8 @@
             ],
             moo: [
                 { round: 1, price: 69.00, lots: 1, equity: 12984, note: "初始入金" },
-                { round: 2, price: 75.90, lots: 2, equity: 19884, note: "盈利滚仓" }
+                { round: 2, price: 75.90, lots: 2, equity: 19884, note: "盈利滚仓" },
+                { round: 3, price: 87.625, lots: 3, equity: 55646, note: "激进加仓(高风险)" }
             ]
         };
 
@@ -234,9 +235,9 @@
             },
             moo: {
                 startPrice: 69.00, startEquity: 12984, startLots: 1,
-                currentPrice: 87.625, currentEquity: 55646.18, currentLots: 2, currentAvgPrice: 76.245,
-                maintainMargin: 7150, contractSize: 1000,
-                boomConst: 7.15
+                currentPrice: 90.055, currentEquity: 59593.17, currentLots: 3, currentAvgPrice: 81.147,
+                maintainMargin: 8548, contractSize: 1000,
+                boomConst: 8.548
             }
         };
 
