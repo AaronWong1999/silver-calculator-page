@@ -138,6 +138,14 @@
                 <span class="config-label">%</span>
             </div>
             <div class="config-item">
+                <span class="config-label">资金调整(CN):</span>
+                <input type="number" id="cnAdj" class="config-input" value="0" step="10000" style="color:#f87171" onchange="recalc()">
+            </div>
+            <div class="config-item">
+                <span class="config-label">资金调整(Moo):</span>
+                <input type="number" id="mooAdj" class="config-input" value="0" step="1000" style="color:#f87171" onchange="recalc()">
+            </div>
+            <div class="config-item">
                 <button class="mode-btn btn-agg" onclick="setMode(10)">🔥 激进 (10%)</button>
                 <button class="mode-btn btn-safe active" onclick="setMode(15)">🛡️ 稳健 (15%)</button>
             </div>
@@ -205,45 +213,6 @@
                 </thead>
                 <tbody></tbody>
             </table>
-        </div>
-        <!-- 压力测试区 -->
-        <div class="strategy-section" style="border-color: #ef4444;">
-            <div class="section-header">
-                <div class="section-title" style="color: #f87171;">
-                    ⚠️ 压力测试：资金抽离推演
-                </div>
-                <div class="section-status" style="color: #a8a29e; font-size: 13px;">
-                    假设保持当前持仓不动，但从账户中提取资金
-                </div>
-            </div>
-            
-            <div style="display: flex; gap: 20px; flex-wrap: wrap;">
-                <!-- 国内压力测试 -->
-                <div style="flex: 1; min-width: 300px;">
-                    <h4 style="color: #93c5fd; margin-bottom: 10px;">国内版 (出金 ¥200,000)</h4>
-                    <table id="stress-cn-table">
-                        <thead>
-                            <tr>
-                                <th>状态</th><th>剩余权益</th><th>新爆仓价</th><th>抗跌能力</th><th>评价</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-
-                <!-- MooMoo压力测试 -->
-                <div style="flex: 1; min-width: 300px;">
-                    <h4 style="color: #93c5fd; margin-bottom: 10px;">MooMoo版 (出金 $30,000)</h4>
-                    <table id="stress-moo-table">
-                        <thead>
-                            <tr>
-                                <th>状态</th><th>剩余权益</th><th>新爆仓价</th><th>抗跌能力</th><th>评价</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-            </div>
         </div>
     </div>
 
@@ -327,6 +296,11 @@
             let p, eq, lots, avg;
             let cfg = CONFIG[type];
 
+            // 读取资金调整值
+            let adj = 0;
+            if (type === 'cn') adj = parseFloat(document.getElementById('cnAdj').value) || 0;
+            else adj = parseFloat(document.getElementById('mooAdj').value) || 0;
+
             if (mode === 'real') {
                 // 现实模式：先填入历史数据
                 let tempAvg = 0;
@@ -349,9 +323,9 @@
                     });
                 });
 
-                // 接着填入当前状态
+                // 接着填入当前状态 (应用调整值)
                 p = cfg.currentPrice;
-                eq = cfg.currentEquity;
+                eq = cfg.currentEquity + adj;
                 lots = cfg.currentLots;
                 
                 // 修正：如果当前手数多于历史最后一手，说明在当前价有加仓，需要更新均价
@@ -370,7 +344,7 @@
             } else {
                 // 理想模式：从头开始
                 p = cfg.startPrice;
-                eq = cfg.startEquity;
+                eq = cfg.startEquity + adj;
                 lots = cfg.startLots;
                 avg = p;
                 
@@ -542,7 +516,6 @@
 
             renderTable('cn');
             renderTable('moo');
-            renderStressTest();
         }
 
         window.onload = recalc;
