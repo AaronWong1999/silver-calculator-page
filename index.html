@@ -206,6 +206,45 @@
                 <tbody></tbody>
             </table>
         </div>
+        <!-- 压力测试区 -->
+        <div class="strategy-section" style="border-color: #ef4444;">
+            <div class="section-header">
+                <div class="section-title" style="color: #f87171;">
+                    ⚠️ 压力测试：资金抽离推演
+                </div>
+                <div class="section-status" style="color: #a8a29e; font-size: 13px;">
+                    假设保持当前持仓不动，但从账户中提取资金
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                <!-- 国内压力测试 -->
+                <div style="flex: 1; min-width: 300px;">
+                    <h4 style="color: #93c5fd; margin-bottom: 10px;">国内版 (出金 ¥200,000)</h4>
+                    <table id="stress-cn-table">
+                        <thead>
+                            <tr>
+                                <th>状态</th><th>剩余权益</th><th>新爆仓价</th><th>抗跌能力</th><th>评价</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <!-- MooMoo压力测试 -->
+                <div style="flex: 1; min-width: 300px;">
+                    <h4 style="color: #93c5fd; margin-bottom: 10px;">MooMoo版 (出金 $30,000)</h4>
+                    <table id="stress-moo-table">
+                        <thead>
+                            <tr>
+                                <th>状态</th><th>剩余权益</th><th>新爆仓价</th><th>抗跌能力</th><th>评价</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -248,6 +287,39 @@
             cn: 'real',
             moo: 'real'
         };
+
+        // === 压力测试逻辑 ===
+        function renderStressTest() {
+            // 国内测试：减资 20w
+            let cnStressEquity = CONFIG.cn.currentEquity - 200000;
+            let cnRisk = calcRisk('cn', CONFIG.cn.currentPrice, cnStressEquity, CONFIG.cn.currentLots, 15);
+            
+            let cnHtml = `
+                <tr class="row-current">
+                    <td>9手持仓</td>
+                    <td>¥${Math.round(cnStressEquity).toLocaleString()}</td>
+                    <td class="txt-red">¥${Math.round(cnRisk.boomPrice).toLocaleString()}</td>
+                    <td class="${cnRisk.safePercent < 10 ? 'txt-red' : (cnRisk.safePercent < 15 ? 'txt-yellow' : 'txt-green')}" style="font-weight:bold; font-size:16px;">${cnRisk.safePercent.toFixed(1)}%</td>
+                    <td>${cnRisk.safePercent < 10 ? '🚨 极度危险' : (cnRisk.safePercent < 15 ? '⚠️ 注意风险' : '✅ 依然安全')}</td>
+                </tr>
+            `;
+            document.querySelector('#stress-cn-table tbody').innerHTML = cnHtml;
+
+            // MooMoo测试：减资 3w
+            let mooStressEquity = CONFIG.moo.currentEquity - 30000;
+            let mooRisk = calcRisk('moo', CONFIG.moo.currentPrice, mooStressEquity, CONFIG.moo.currentLots, 15);
+            
+            let mooHtml = `
+                <tr class="row-current">
+                    <td>4手持仓</td>
+                    <td>${Math.round(mooStressEquity).toLocaleString()}</td>
+                    <td class="txt-red">${mooRisk.boomPrice.toFixed(2)}</td>
+                    <td class="${mooRisk.safePercent < 10 ? 'txt-red' : (mooRisk.safePercent < 15 ? 'txt-yellow' : 'txt-green')}" style="font-weight:bold; font-size:16px;">${mooRisk.safePercent.toFixed(1)}%</td>
+                    <td>${mooRisk.safePercent < 10 ? '🚨 极度危险' : (mooRisk.safePercent < 15 ? '⚠️ 注意风险' : '✅ 依然安全')}</td>
+                </tr>
+            `;
+            document.querySelector('#stress-moo-table tbody').innerHTML = mooHtml;
+        }
 
         // === 核心计算逻辑 ===
         function calculateScenario(type, mode, safetyRate) {
@@ -470,6 +542,7 @@
 
             renderTable('cn');
             renderTable('moo');
+            renderStressTest();
         }
 
         window.onload = recalc;
