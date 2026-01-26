@@ -30,6 +30,8 @@
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             backdrop-filter: blur(5px);
             transition: all 0.5s ease;
+            position: relative;
+            overflow: hidden;
         }
         .ratio-panel.alert-active {
             background: rgba(220, 38, 38, 0.2);
@@ -42,18 +44,31 @@
             100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
         }
 
-        .market-data { display: flex; gap: 30px; align-items: center; }
-        .price-item { display: flex; flex-direction: column; }
+        .market-data { display: flex; gap: 30px; align-items: center; z-index: 10; }
+        .price-item { display: flex; flex-direction: column; position: relative; width: 100px; }
         .price-label { font-size: 12px; color: #94a3b8; text-transform: uppercase; font-weight: bold; }
-        .price-val { font-size: 18px; font-weight: 700; font-family: 'SF Mono', monospace; color: #fff; }
+        .price-val { font-size: 18px; font-weight: 700; font-family: 'SF Mono', monospace; color: #fff; z-index: 1; }
         .gold-val { color: #facc15; }
         .silver-val { color: #e2e8f0; }
 
-        .ratio-display { text-align: center; }
+        .sparkline {
+            height: 30px;
+            width: 100%;
+            margin-top: 2px;
+            opacity: 0.7;
+        }
+        .sparkline path {
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .ratio-display { text-align: center; z-index: 10; width: 140px; }
         .ratio-val { font-size: 32px; font-weight: 800; color: #38bdf8; line-height: 1.1; }
         .ratio-desc { font-size: 12px; color: #7dd3fc; text-transform: uppercase; letter-spacing: 1px; }
 
-        .ratio-target { display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.2); padding: 8px 15px; border-radius: 8px; }
+        .ratio-target { display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.2); padding: 8px 15px; border-radius: 8px; z-index: 10; }
         .target-input { width: 60px; background: transparent; border: none; border-bottom: 1px solid #94a3b8; color: #fff; text-align: center; font-size: 16px; font-weight: bold; }
         .target-input:focus { outline: none; border-color: #38bdf8; }
 
@@ -157,7 +172,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>白银期货：动态风控策略计算器 v3.0</h1>
+        <h1>白银期货：动态风控策略计算器 v3.1</h1>
         <p class="subtitle">一份代码，平行宇宙。调整抗跌系数，对比理想与现实。</p>
 
         <!-- 金银比监控面板 -->
@@ -166,22 +181,25 @@
                 <div class="price-item">
                     <span class="price-label">Gold (XAU)</span>
                     <span class="price-val gold-val" id="price-xau">Loading...</span>
+                    <svg class="sparkline" id="spark-xau"></svg>
                 </div>
                 <div class="price-item">
                     <span class="price-label">Silver (XAG)</span>
                     <span class="price-val silver-val" id="price-xag">Loading...</span>
+                    <svg class="sparkline" id="spark-xag"></svg>
                 </div>
             </div>
             
             <div class="ratio-display">
                 <div class="ratio-val" id="ratio-val">--.--</div>
                 <div class="ratio-desc">当前金银比 (Gold/Silver Ratio)</div>
+                <svg class="sparkline" id="spark-ratio"></svg>
             </div>
 
             <div class="ratio-target">
                 <span style="font-size: 13px; color: #94a3b8;">提醒阈值:</span>
                 <input type="number" id="targetRatio" class="target-input" value="44" step="0.5" onchange="checkRatio()">
-                <div id="alert-icon" style="opacity: 0.3;">🔔</div>
+                <div id="alert-icon" style="opacity: 0.3; cursor: pointer;" onclick="requestNotifyPermission()" title="点击开启弹窗通知">🔔</div>
             </div>
         </div>
 
@@ -339,10 +357,18 @@
         // === 金银比实时监控 ===
         let currentGold = 0;
         let currentSilver = 0;
+        let lastNotifyTime = 0;
+        
+        // 历史数据存储（最近50个点）
+        const historyData = {
+            gold: [],
+            silver: [],
+            ratio: []
+        };
+        const MAX_HISTORY = 50;
 
         async function fetchPrices() {
             try {
-                // 使用 Binance Futures API (可能需要代理，这里假设前端能直连)
                 const [goldRes, silverRes] = await Promise.all([
                     fetch('https://fapi.binance.com/fapi/v1/ticker/price?symbol=XAUUSDT'),
                     fetch('https://fapi.binance.com/fapi/v1/ticker/price?symbol=XAGUSDT')
@@ -353,59 +379,120 @@
 
                 currentGold = parseFloat(goldData.price);
                 currentSilver = parseFloat(silverData.price);
+                const currentRatio = currentGold / currentSilver;
 
-                updateRatioUI();
+                // 更新历史数据
+                updateHistory(historyData.gold, currentGold);
+                updateHistory(historyData.silver, currentSilver);
+                updateHistory(historyData.ratio, currentRatio);
+
+                updateRatioUI(currentRatio);
+                
+                // 绘制小图表
+                drawSparkline('spark-xau', historyData.gold, '#facc15');
+                drawSparkline('spark-xag', historyData.silver, '#e2e8f0');
+                drawSparkline('spark-ratio', historyData.ratio, '#38bdf8');
+
             } catch (e) {
                 console.error("Fetch Error:", e);
-                // 仅作为 Fallback 或测试：使用随机波动模拟（如果 API 失败）
-                // 实际生产中应显示错误
                 document.getElementById('ratio-val').innerText = "Err";
             }
         }
 
-        function updateRatioUI() {
+        function updateHistory(arr, val) {
+            arr.push(val);
+            if (arr.length > MAX_HISTORY) arr.shift();
+        }
+
+        function drawSparkline(id, data, color) {
+            if (data.length < 2) return;
+            
+            const svg = document.getElementById(id);
+            const width = svg.clientWidth || 100;
+            const height = svg.clientHeight || 30;
+            
+            const min = Math.min(...data);
+            const max = Math.max(...data);
+            const range = max - min || 1; // 防止除零
+            
+            // 生成路径点
+            const points = data.map((val, idx) => {
+                const x = (idx / (data.length - 1)) * width;
+                const y = height - ((val - min) / range) * height; // Y轴反转
+                return `${x},${y}`;
+            }).join(' ');
+
+            svg.innerHTML = `<path d="M ${points}" stroke="${color}" fill="none" />`;
+        }
+
+        function updateRatioUI(ratio) {
             if (!currentGold || !currentSilver) return;
 
             document.getElementById('price-xau').innerText = `$${currentGold.toFixed(2)}`;
             document.getElementById('price-xag').innerText = `$${currentSilver.toFixed(3)}`;
-
-            const ratio = currentGold / currentSilver;
             document.getElementById('ratio-val').innerText = ratio.toFixed(2);
 
             checkRatio(ratio);
         }
 
+        function requestNotifyPermission() {
+            if (!("Notification" in window)) {
+                alert("此浏览器不支持桌面通知");
+            } else if (Notification.permission === "granted") {
+                new Notification("通知权限已开启！");
+            } else if (Notification.permission !== "denied") {
+                Notification.requestPermission().then(function (permission) {
+                    if (permission === "granted") {
+                        new Notification("通知权限已开启！");
+                    }
+                });
+            }
+        }
+
+        function sendNotification(ratio) {
+            const now = Date.now();
+            // 5分钟冷却时间 (300,000 ms)
+            if (now - lastNotifyTime > 300000) {
+                if (Notification.permission === "granted") {
+                    new Notification(`🔔 金银比提醒: ${ratio.toFixed(2)}`, {
+                        body: "当前金银比已低于设定阈值，请关注市场机会！",
+                        icon: "https://cdn-icons-png.flaticon.com/512/3658/3658959.png" // 简单的图标
+                    });
+                    lastNotifyTime = now;
+                }
+            }
+        }
+
         function checkRatio(currentRatio) {
             const target = parseFloat(document.getElementById('targetRatio').value) || 44;
-            // 如果没有传入 currentRatio，则重新计算
-            if (!currentRatio && currentGold && currentSilver) {
-                currentRatio = currentGold / currentSilver;
-            }
-
+            
             const panel = document.getElementById('ratioPanel');
             const icon = document.getElementById('alert-icon');
             
-            // 简单逻辑：如果金银比低于目标值（说明白银相对于黄金变贵了？或者黄金变便宜了？）
-            // 通常金银比下跌意味着白银跑赢黄金。
-            // 这里我们假设只要 *触碰* 到这个值就提醒
-            
-            // 为了避免频繁闪烁，这里设置一个简单的阈值逻辑：如果 Ratio <= Target
             if (currentRatio && currentRatio <= target) {
                 panel.classList.add('alert-active');
                 icon.style.opacity = '1';
                 icon.innerText = '🔔 触发提醒!';
                 document.title = `🔔 ${currentRatio.toFixed(2)} - 金银比提醒`;
+                
+                // 触发浏览器通知
+                sendNotification(currentRatio);
             } else {
                 panel.classList.remove('alert-active');
                 icon.style.opacity = '0.3';
                 icon.innerText = '🔔';
-                document.title = '白银期货：动态风控策略计算器 v3.0';
+                document.title = '白银期货：动态风控策略计算器 v3.1';
             }
         }
 
         // 启动定时任务
         setInterval(fetchPrices, 10000); // 每10秒更新一次
         fetchPrices(); // 立即执行一次
+        
+        // 页面加载后自动尝试请求权限（有些浏览器会拦截，所以保留手动点击）
+        if (Notification.permission !== "granted" && Notification.permission !== "denied") {
+            // Notification.requestPermission(); // 现代浏览器通常禁止自动请求，需用户交互
+        }
 
         // === 核心计算逻辑 ===
         function calculateScenario(type, mode, safetyRate) {
