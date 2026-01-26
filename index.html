@@ -138,6 +138,14 @@
                 <span class="config-label">%</span>
             </div>
             <div class="config-item">
+                <span class="config-label">CN本金:</span>
+                <input type="number" id="cnPrincipal" class="config-input" value="250000" step="10000" style="color:#fbbf24" onchange="recalc()">
+            </div>
+            <div class="config-item">
+                <span class="config-label">Moo本金:</span>
+                <input type="number" id="mooPrincipal" class="config-input" value="25000" step="1000" style="color:#fbbf24" onchange="recalc()">
+            </div>
+            <div class="config-item">
                 <span class="config-label">资金调整(CN):</span>
                 <input type="number" id="cnAdj" class="config-input" value="0" step="10000" style="color:#f87171" onchange="recalc()">
             </div>
@@ -177,7 +185,7 @@
                 <thead>
                     <tr>
                         <th>轮次</th><th>状态</th><th>触发价格</th><th>操作</th><th>总持仓</th><th>持仓均价</th><th>账户余额</th>
-                        <th>爆仓价</th><th>需补保</th><th>抗跌能力</th>
+                        <th>保本价</th><th>安全垫</th><th>爆仓价</th><th>需补保</th><th>抗跌能力</th>
                     </tr>
                 </thead>
                 <tbody></tbody>
@@ -208,7 +216,7 @@
                 <thead>
                     <tr>
                         <th>轮次</th><th>状态</th><th>触发价格</th><th>操作</th><th>总持仓</th><th>持仓均价</th><th>账户余额</th>
-                        <th>爆仓价</th><th>需补保</th><th>抗跌能力</th>
+                        <th>保本价</th><th>安全垫</th><th>爆仓价</th><th>需补保</th><th>抗跌能力</th>
                     </tr>
                 </thead>
                 <tbody></tbody>
@@ -438,6 +446,8 @@
             const mode = state[type];
             const dataset = calculateScenario(type, mode, safetyRate);
             
+            let principal = type === 'cn' ? parseFloat(document.getElementById('cnPrincipal').value) : parseFloat(document.getElementById('mooPrincipal').value);
+
             let html = '';
             let finalRow = null;
             let nextAction = null;
@@ -448,6 +458,13 @@
                 let risk = calcRisk(type, row.price, row.equity, row.lots, safetyRate);
                 let isCurrent = row.type === 'current';
                 
+                // 保本价计算: BreakEven = Price - (Equity - Principal) / (Lots * Size)
+                let breakEven = row.price - (row.equity - principal) / (row.lots * CONFIG[type].contractSize);
+                let cushion = (row.price - breakEven) / row.price * 100;
+                let cushionTxt = cushion >= 0 ? 
+                    `<span class="txt-green">🛡️ ${cushion.toFixed(1)}%</span>` : 
+                    `<span class="txt-red">🚨 ${cushion.toFixed(1)}%</span>`;
+
                 let rowClass = isCurrent ? 'row-current' : (mode === 'ideal' ? 'row-ideal' : 'row-future');
                 if (row.type === 'history') rowClass = 'row-history';
                 if (row.note === '立即加仓') rowClass = 'row-trigger';
@@ -465,6 +482,10 @@
                     <td>${row.lots}手</td>
                     <td class="txt-blue">${cur}${row.avgPrice.toLocaleString(undefined, {maximumFractionDigits: type==='cn'?0:2})}</td>
                     <td>${cur}${Math.round(row.equity).toLocaleString()}</td>
+                    
+                    <td style="font-weight:bold; color:${cushion>=0 ? '#fbbf24' : '#ef4444'}">${cur}${breakEven.toLocaleString(undefined, {maximumFractionDigits: type==='cn'?0:2})}</td>
+                    <td>${cushionTxt}</td>
+
                     <td class="txt-red">${cur}${risk.boomPrice.toLocaleString(undefined, {maximumFractionDigits: type==='cn'?0:2})}</td>
                     <td>${mcTxt}</td>
                     <td class="${risk.safePercent < safetyRate ? 'txt-red' : 'txt-green'}">${risk.safePercent.toFixed(1)}%</td>
