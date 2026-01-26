@@ -462,13 +462,13 @@
                 let breakEven = row.price - (row.equity - principal) / (row.lots * CONFIG[type].contractSize);
                 let cushion = (row.price - breakEven) / row.price * 100;
                 
-                // 检查：如果保本价 < 爆仓价，说明会先爆仓。
-                // 这是一个极其危险的信号，意味着保本价是不可达的（除非追加保证金）。
-                let isZombie = breakEven < risk.boomPrice;
+                // 检查：如果保本价 < 爆仓价，说明利润极厚，即使爆仓，剩余资金也大于本金。
+                let isSuperSafe = breakEven < risk.boomPrice;
                 
                 let breakEvenHtml = '';
-                if (isZombie) {
-                    breakEvenHtml = `<span style="text-decoration: line-through; color:#78716c;">${cur}${breakEven.toLocaleString(undefined, {maximumFractionDigits: type==='cn'?0:2})}</span><br><span style="font-size:10px; color:#ef4444;">⚠️ 先爆仓</span>`;
+                if (isSuperSafe) {
+                    // 这种情况下，保本已不是问题，问题是保利润。
+                    breakEvenHtml = `<span style="font-weight:bold; color:#4ade80;">${cur}${breakEven.toLocaleString(undefined, {maximumFractionDigits: type==='cn'?0:2})}</span><br><span style="font-size:10px; color:#4ade80;">✅ 爆仓亦保本</span>`;
                 } else {
                     breakEvenHtml = `<span style="font-weight:bold; color:${cushion>=0 ? '#fbbf24' : '#ef4444'}">${cur}${breakEven.toLocaleString(undefined, {maximumFractionDigits: type==='cn'?0:2})}</span>`;
                 }
