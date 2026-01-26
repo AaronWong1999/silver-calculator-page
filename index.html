@@ -455,6 +455,7 @@
             dataset.forEach((row, idx) => {
                 if (idx > 0 && row.price === dataset[idx-1].price && row.lots === dataset[idx-1].lots) return;
 
+                let cur = type === 'cn' ? '¥' : '$';
                 let risk = calcRisk(type, row.price, row.equity, row.lots, safetyRate);
                 let isCurrent = row.type === 'current';
                 
@@ -481,7 +482,6 @@
                 if (row.type === 'history') rowClass = 'row-history';
                 if (row.note === '立即加仓') rowClass = 'row-trigger';
 
-                let cur = type === 'cn' ? '¥' : '$';
                 let mcTxt = risk.marginCall > 0 ? 
                     `<span class="txt-red">+${cur}${Math.round(risk.marginCall).toLocaleString()}</span>` : 
                     `<span class="txt-green">✔</span>`;
