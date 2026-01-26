@@ -43,34 +43,46 @@
             70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
             100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
         }
+        @keyframes pulse-yellow {
+            0% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(250, 204, 21, 0.4)); }
+            50% { transform: scale(1.2); filter: drop-shadow(0 0 5px rgba(250, 204, 21, 0.8)); }
+            100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(250, 204, 21, 0.4)); }
+        }
 
         .market-data { display: flex; gap: 30px; align-items: center; z-index: 10; }
-        .price-item { display: flex; flex-direction: column; position: relative; width: 100px; }
+        .price-item { display: flex; flex-direction: column; position: relative; width: 120px; }
         .price-label { font-size: 12px; color: #94a3b8; text-transform: uppercase; font-weight: bold; }
         .price-val { font-size: 18px; font-weight: 700; font-family: 'SF Mono', monospace; color: #fff; z-index: 1; }
         .gold-val { color: #facc15; }
         .silver-val { color: #e2e8f0; }
 
+        .hl-label { font-size: 10px; color: #64748b; margin-top: 2px; display: flex; justify-content: space-between; font-family: 'SF Mono', monospace; }
+        
         .sparkline {
             height: 30px;
             width: 100%;
             margin-top: 2px;
-            opacity: 0.7;
+            opacity: 0.8;
         }
         .sparkline path {
             fill: none;
-            stroke-width: 2;
+            stroke-width: 1.5;
             stroke-linecap: round;
             stroke-linejoin: round;
         }
 
-        .ratio-display { text-align: center; z-index: 10; width: 140px; }
+        .ratio-display { text-align: center; z-index: 10; width: 160px; }
         .ratio-val { font-size: 32px; font-weight: 800; color: #38bdf8; line-height: 1.1; }
         .ratio-desc { font-size: 12px; color: #7dd3fc; text-transform: uppercase; letter-spacing: 1px; }
 
         .ratio-target { display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.2); padding: 8px 15px; border-radius: 8px; z-index: 10; }
         .target-input { width: 60px; background: transparent; border: none; border-bottom: 1px solid #94a3b8; color: #fff; text-align: center; font-size: 16px; font-weight: bold; }
         .target-input:focus { outline: none; border-color: #38bdf8; }
+        #alert-icon.permission-needed {
+            animation: pulse-yellow 2s infinite;
+            color: #facc15;
+            opacity: 1 !important;
+        }
 
         /* 顶部配置栏 */
         .config-panel {
@@ -182,11 +194,13 @@
                     <span class="price-label">Gold (XAU)</span>
                     <span class="price-val gold-val" id="price-xau">Loading...</span>
                     <svg class="sparkline" id="spark-xau"></svg>
+                    <div class="hl-label" id="hl-xau"><span>H:-</span><span>L:-</span></div>
                 </div>
                 <div class="price-item">
                     <span class="price-label">Silver (XAG)</span>
                     <span class="price-val silver-val" id="price-xag">Loading...</span>
                     <svg class="sparkline" id="spark-xag"></svg>
+                    <div class="hl-label" id="hl-xag"><span>H:-</span><span>L:-</span></div>
                 </div>
             </div>
             
@@ -194,6 +208,7 @@
                 <div class="ratio-val" id="ratio-val">--.--</div>
                 <div class="ratio-desc">当前金银比 (Gold/Silver Ratio)</div>
                 <svg class="sparkline" id="spark-ratio"></svg>
+                <div class="hl-label" id="hl-ratio" style="justify-content: center; gap: 10px;"><span>H:-</span><span>L:-</span></div>
             </div>
 
             <div class="ratio-target">
@@ -359,13 +374,13 @@
         let currentSilver = 0;
         let lastNotifyTime = 0;
         
-        // 历史数据存储（最近50个点）
+        // 历史数据存储（最近1440个点 = 4小时）
         const historyData = {
             gold: [],
             silver: [],
             ratio: []
         };
-        const MAX_HISTORY = 50;
+        const MAX_HISTORY = 1440;
 
         async function fetchPrices() {
             try {
@@ -389,9 +404,9 @@
                 updateRatioUI(currentRatio);
                 
                 // 绘制小图表
-                drawSparkline('spark-xau', historyData.gold, '#facc15');
-                drawSparkline('spark-xag', historyData.silver, '#e2e8f0');
-                drawSparkline('spark-ratio', historyData.ratio, '#38bdf8');
+                drawSparkline('spark-xau', 'hl-xau', historyData.gold, '#facc15');
+                drawSparkline('spark-xag', 'hl-xag', historyData.silver, '#e2e8f0');
+                drawSparkline('spark-ratio', 'hl-ratio', historyData.ratio, '#38bdf8');
 
             } catch (e) {
                 console.error("Fetch Error:", e);
@@ -404,20 +419,34 @@
             if (arr.length > MAX_HISTORY) arr.shift();
         }
 
-        function drawSparkline(id, data, color) {
+        function drawSparkline(svgId, labelId, data, color) {
             if (data.length < 2) return;
             
-            const svg = document.getElementById(id);
+            const svg = document.getElementById(svgId);
             const width = svg.clientWidth || 100;
             const height = svg.clientHeight || 30;
             
             const min = Math.min(...data);
             const max = Math.max(...data);
+            
+            // 更新 High/Low 标签
+            if (document.getElementById(labelId)) {
+                document.getElementById(labelId).innerHTML = `<span>H:${max.toFixed(2)}</span><span>L:${min.toFixed(2)}</span>`;
+            }
+
             const range = max - min || 1; // 防止除零
             
+            // 简单的降采样以优化渲染
+            // 目标：在屏幕上绘制不超过 200 个关键点
+            let renderData = data;
+            const step = Math.ceil(data.length / 200); 
+            if (step > 1) {
+                renderData = data.filter((_, i) => i % step === 0);
+            }
+            
             // 生成路径点
-            const points = data.map((val, idx) => {
-                const x = (idx / (data.length - 1)) * width;
+            const points = renderData.map((val, idx) => {
+                const x = (idx / (renderData.length - 1)) * width;
                 const y = height - ((val - min) / range) * height; // Y轴反转
                 return `${x},${y}`;
             }).join(' ');
@@ -435,15 +464,28 @@
             checkRatio(ratio);
         }
 
+        function checkPermissionStatus() {
+             if (!("Notification" in window)) return;
+             
+             const icon = document.getElementById('alert-icon');
+             if (Notification.permission === "default") {
+                 if(icon) {
+                     icon.classList.add('permission-needed');
+                     icon.title = "点击开启通知权限（强烈建议开启）";
+                 }
+             } else {
+                 if(icon) icon.classList.remove('permission-needed');
+             }
+        }
+
         function requestNotifyPermission() {
             if (!("Notification" in window)) {
                 alert("此浏览器不支持桌面通知");
-            } else if (Notification.permission === "granted") {
-                new Notification("通知权限已开启！");
-            } else if (Notification.permission !== "denied") {
+            } else {
                 Notification.requestPermission().then(function (permission) {
+                    checkPermissionStatus();
                     if (permission === "granted") {
-                        new Notification("通知权限已开启！");
+                        new Notification("通知权限已开启！", { body: "当金银比达到阈值时你会收到提醒。" });
                     }
                 });
             }
@@ -489,10 +531,8 @@
         setInterval(fetchPrices, 10000); // 每10秒更新一次
         fetchPrices(); // 立即执行一次
         
-        // 页面加载后自动尝试请求权限（有些浏览器会拦截，所以保留手动点击）
-        if (Notification.permission !== "granted" && Notification.permission !== "denied") {
-            // Notification.requestPermission(); // 现代浏览器通常禁止自动请求，需用户交互
-        }
+        // 页面加载后检查权限状态
+        checkPermissionStatus();
 
         // === 核心计算逻辑 ===
         function calculateScenario(type, mode, safetyRate) {
