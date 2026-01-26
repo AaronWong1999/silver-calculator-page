@@ -134,7 +134,7 @@
             </div>
             <div class="config-item">
                 <span class="config-label">MooMoo保证金:</span>
-                <input type="number" id="mooMarginRate" class="config-input" value="9.2" step="0.1" onchange="recalc()">
+                <input type="number" id="mooMarginRate" class="config-input" value="8.6" step="0.1" onchange="recalc()">
                 <span class="config-label">%</span>
             </div>
             <div class="config-item">
@@ -197,8 +197,8 @@
                 <div id="moo-status" class="section-status"></div>
             </div>
             <div class="params-grid">
-                <div class="param-box"><div class="label">持仓手数</div><div class="value" id="moo-curr-lots">2手</div></div>
-                <div class="param-box"><div class="label">当前净值</div><div class="value" id="moo-curr-equity">$47,016</div></div>
+                <div class="param-box"><div class="label">持仓手数</div><div class="value" id="moo-curr-lots">6手</div></div>
+                <div class="param-box"><div class="label">当前净值</div><div class="value" id="moo-curr-equity">$163,144</div></div>
                 <div class="param-box"><div class="label">爆仓价格</div><div class="value danger" id="moo-boom-price">-</div></div>
                 <div class="param-box"><div class="label">下个加仓价</div><div class="value highlight" id="moo-next-price">-</div></div>
                 <div class="param-box"><div class="label">最终收益</div><div class="value" id="moo-final-equity">-</div></div>
@@ -231,27 +231,30 @@
                 { round: 9, price: 25387, lots: 9, equity: 1044455, note: "高位加仓" },
                 { round: 10, price: 27288, lots: 10, equity: 1243770, note: "再创新高" },
                 { round: 11, price: 27453, lots: 11, equity: 1271829, note: "乘胜追击" },
-                { round: 12, price: 29850, lots: 12, equity: 1672051, note: "势如破竹" }
+                { round: 12, price: 29820, lots: 12, equity: 1667000, note: "回调加仓" },
+                { round: 13, price: 29850, lots: 13, equity: 1691679, note: "势如破竹" }
             ],
             moo: [
                 { round: 1, price: 76.245, lots: 2, equity: 19884, note: "初始持仓" },
                 { round: 2, price: 90.95, lots: 3, equity: 59593, note: "高位加仓" },
-                { round: 3, price: 101.365, lots: 4, equity: 93895, note: "高位追涨" }
+                { round: 3, price: 101.365, lots: 4, equity: 93895, note: "高位追涨" },
+                { round: 4, price: 109.1, lots: 5, equity: 124835, note: "动态加仓" },
+                { round: 5, price: 115.995, lots: 6, equity: 159310, note: "高位加仓" }
             ]
         };
 
         const CONFIG = {
             cn: {
                 startPrice: 15869, startEquity: 243414, startLots: 3,
-                currentPrice: 29870, currentEquity: 1672051.96, currentLots: 12, currentAvgPrice: 22741,
-                marginRate: 0.152, contractSize: 15,
-                boomCoef: 0.848
+                currentPrice: 29970, currentEquity: 1691679.56, currentLots: 13, currentAvgPrice: 23286,
+                marginRate: 0.1527, contractSize: 15,
+                boomCoef: 0.8473
             },
             moo: {
                 startPrice: 69.00, startEquity: 12984, startLots: 1,
-                currentPrice: 108.88, currentEquity: 123595.16, currentLots: 4, currentAvgPrice: 86.20125,
-                marginRate: 0.092, contractSize: 1000,
-                boomCoef: 0.908
+                currentPrice: 116.695, currentEquity: 163144.14, currentLots: 6, currentAvgPrice: 94.913,
+                marginRate: 0.086, contractSize: 1000,
+                boomCoef: 0.914
             }
         };
 
