@@ -326,58 +326,58 @@
         </div>
 
         <!-- 邮件通知配置面板 (v4.0新增) -->
-        <div class="glass-panel mb-6">
-            <div class="flex justify-between items-center mb-4">
+        <div class="mb-6 p-4 rounded-xl border border-gray-700 bg-gray-900/50 backdrop-blur-sm">
+            <div class="flex justify-between items-center mb-2">
                 <div class="flex items-center gap-2">
-                    <span class="text-xl">📧 邮件报警设置</span>
+                    <span class="text-lg font-bold text-gray-300">📧 邮件报警设置</span>
                     <span id="email-status-icon" class="text-xs px-2 py-0.5 rounded bg-gray-700 text-gray-400">未配置</span>
                 </div>
-                <button onclick="toggleEmailConfig()" class="text-sm text-sky-400 hover:text-sky-300">展开/折叠</button>
+                <button onclick="toggleEmailConfig()" class="text-xs text-sky-400 hover:text-sky-300">展开/折叠</button>
             </div>
             
-            <div id="emailConfigPanel" class="hidden space-y-3">
-                <div class="text-xs text-gray-400 mb-2">
+            <div id="emailConfigPanel" class="hidden space-y-3 mt-4">
+                <div class="text-xs text-gray-500 mb-2">
                     <p>使用 EmailJS 发送通知。请自行注册 <a href="https://www.emailjs.com/" target="_blank" class="text-sky-400 underline">EmailJS</a> 免费账号。</p>
                     <p>数据仅保存在您本地浏览器，不会上传服务器。</p>
                 </div>
                 
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs text-gray-500 mb-1">Service ID</label>
-                        <input type="text" id="email_service_id" class="w-full bg-stone-900 border border-stone-700 rounded px-2 py-1 text-sm text-white" placeholder="service_xxx">
+                        <input type="text" id="email_service_id" class="w-full bg-stone-900 border border-stone-700 rounded px-2 py-1 text-sm text-gray-300 focus:border-sky-500 outline-none" placeholder="service_xxx">
                     </div>
                     <div>
                         <label class="block text-xs text-gray-500 mb-1">Template ID</label>
-                        <input type="text" id="email_template_id" class="w-full bg-stone-900 border border-stone-700 rounded px-2 py-1 text-sm text-white" placeholder="template_xxx">
+                        <input type="text" id="email_template_id" class="w-full bg-stone-900 border border-stone-700 rounded px-2 py-1 text-sm text-gray-300 focus:border-sky-500 outline-none" placeholder="template_xxx">
                     </div>
                 </div>
                 
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs text-gray-500 mb-1">Public Key</label>
-                        <input type="text" id="email_public_key" class="w-full bg-stone-900 border border-stone-700 rounded px-2 py-1 text-sm text-white" placeholder="用户公钥">
+                        <input type="text" id="email_public_key" class="w-full bg-stone-900 border border-stone-700 rounded px-2 py-1 text-sm text-gray-300 focus:border-sky-500 outline-none" placeholder="用户公钥">
                     </div>
                     <div>
                         <label class="block text-xs text-gray-500 mb-1">接收邮箱</label>
-                        <input type="email" id="email_to_address" class="w-full bg-stone-900 border border-stone-700 rounded px-2 py-1 text-sm text-white" placeholder="your@email.com">
+                        <input type="email" id="email_to_address" class="w-full bg-stone-900 border border-stone-700 rounded px-2 py-1 text-sm text-gray-300 focus:border-sky-500 outline-none" placeholder="your@email.com">
                     </div>
                 </div>
 
                 <div class="flex justify-between items-center pt-2 border-t border-stone-700 mt-2">
                     <div class="flex items-center gap-2">
-                        <input type="checkbox" id="email_enabled" class="w-4 h-4 rounded bg-stone-800 border-stone-600">
-                        <label for="email_enabled" class="text-sm text-gray-300">启用邮件报警</label>
+                        <input type="checkbox" id="email_enabled" class="w-4 h-4 rounded bg-stone-800 border-stone-600 accent-sky-500">
+                        <label for="email_enabled" class="text-sm text-gray-300 cursor-pointer select-none">启用邮件报警</label>
                     </div>
                     <div class="flex gap-2">
-                        <button onclick="saveEmailConfig()" class="px-3 py-1 bg-sky-600 hover:bg-sky-500 text-white rounded text-sm">保存配置</button>
-                        <button onclick="testEmail()" class="px-3 py-1 bg-stone-700 hover:bg-stone-600 text-white rounded text-sm">发送测试邮件</button>
+                        <button onclick="saveEmailConfig()" class="px-3 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded text-xs font-bold transition-colors">保存配置</button>
+                        <button onclick="testEmail()" class="px-3 py-1.5 bg-stone-700 hover:bg-stone-600 text-white rounded text-xs font-bold transition-colors">测试邮件</button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- 资金配置区域 -->
-        <div class="glass-panel mb-6">
+        <!-- 资金配置区域 (Restored Class) -->
+        <div class="config-panel">
 
             <div class="config-item">
                 <span class="config-label">设定抗跌回撤:</span>
