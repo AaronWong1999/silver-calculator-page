@@ -496,9 +496,10 @@
             const saved = localStorage.getItem('silver_calc_history_v3');
             if (saved) {
                 const parsed = JSON.parse(saved);
-                if (parsed.gold) historyData.gold = parsed.gold;
-                if (parsed.silver) historyData.silver = parsed.silver;
-                if (parsed.ratio) historyData.ratio = parsed.ratio;
+                // Filter out invalid values (null, 0, or non-positive) to fix "L:0.00" bug
+                if (parsed.gold) historyData.gold = parsed.gold.filter(v => v > 0);
+                if (parsed.silver) historyData.silver = parsed.silver.filter(v => v > 0);
+                if (parsed.ratio) historyData.ratio = parsed.ratio.filter(v => v > 0);
             }
         } catch (e) { console.error("Load history failed", e); }
 
@@ -515,6 +516,11 @@
 
                 currentGold = parseFloat(goldData.price);
                 currentSilver = parseFloat(silverData.price);
+
+                if (isNaN(currentGold) || currentGold <= 0 || isNaN(currentSilver) || currentSilver <= 0) {
+                    throw new Error("Invalid price data");
+                }
+
                 const currentRatio = currentGold / currentSilver;
 
                 // 更新历史数据
@@ -544,14 +550,16 @@
         }
 
         function drawSparkline(svgId, labelId, data, color) {
-            if (data.length < 2) return;
+            // Filter invalid data for display safety
+            const validData = data.filter(v => typeof v === 'number' && !isNaN(v) && v > 0);
+            if (validData.length < 2) return;
             
             const svg = document.getElementById(svgId);
             const width = svg.clientWidth || 100;
             const height = svg.clientHeight || 30;
             
-            const min = Math.min(...data);
-            const max = Math.max(...data);
+            const min = Math.min(...validData);
+            const max = Math.max(...validData);
             
             // 更新 High/Low 标签
             if (document.getElementById(labelId)) {
@@ -562,7 +570,7 @@
             
             // 简单的降采样以优化渲染
             // 目标：在屏幕上绘制不超过 200 个关键点
-            let renderData = data;
+            let renderData = validData;
             const step = Math.ceil(data.length / 200); 
             if (step > 1) {
                 renderData = data.filter((_, i) => i % step === 0);
