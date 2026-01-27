@@ -382,8 +382,20 @@
         };
         const MAX_HISTORY = 1440;
 
+        // [新增] 尝试从本地存储加载历史数据
+        try {
+            const saved = localStorage.getItem('silver_calc_history_v3');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                if (parsed.gold) historyData.gold = parsed.gold;
+                if (parsed.silver) historyData.silver = parsed.silver;
+                if (parsed.ratio) historyData.ratio = parsed.ratio;
+            }
+        } catch (e) { console.error("Load history failed", e); }
+
         async function fetchPrices() {
             try {
+                // 使用 Binance Futures API
                 const [goldRes, silverRes] = await Promise.all([
                     fetch('https://fapi.binance.com/fapi/v1/ticker/price?symbol=XAUUSDT'),
                     fetch('https://fapi.binance.com/fapi/v1/ticker/price?symbol=XAGUSDT')
@@ -401,9 +413,12 @@
                 updateHistory(historyData.silver, currentSilver);
                 updateHistory(historyData.ratio, currentRatio);
 
+                // [新增] 保存到本地存储
+                localStorage.setItem('silver_calc_history_v3', JSON.stringify(historyData));
+
                 updateRatioUI(currentRatio);
                 
-                // 绘制小图表
+                // 绘制小图表 (传入对应的 label ID)
                 drawSparkline('spark-xau', 'hl-xau', historyData.gold, '#facc15');
                 drawSparkline('spark-xag', 'hl-xag', historyData.silver, '#e2e8f0');
                 drawSparkline('spark-ratio', 'hl-ratio', historyData.ratio, '#38bdf8');
