@@ -621,44 +621,102 @@
             alert("测试请求已发送，请检查控制台或邮箱。");
         }
 
-        function checkPriceAlerts(currentRatio) {
-            // 1. 金银比检查
-            const targetRatio = parseFloat(document.getElementById('targetRatio').value) || 44;
-            if (currentRatio <= targetRatio) {
-                sendEmailAlert(
-                    `🚨 金银比机会提醒: ${currentRatio.toFixed(2)}`, 
-                    `当前金银比 ${currentRatio.toFixed(2)} 已低于设定值 ${targetRatio}。`, 
-                    'ratio'
-                );
+        // === 辅助功能：Toast 通知 (兼容移动端) ===
+        function showToast(msg, type = 'info') {
+            let container = document.getElementById('toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toast-container';
+                container.style.cssText = "position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; display: flex; flex-direction: column; gap: 10px; pointer-events: none;";
+                document.body.appendChild(container);
             }
 
-            // 2. 价格点位检查 (CN & Moo)
-            ['cn', 'moo'].forEach(type => {
-                const curPrice = type === 'cn' ? CONFIG.cn.currentPrice : CONFIG.moo.currentPrice; // 这里需要确保CONFIG里的currentPrice是最新的
-                const nextRow = document.querySelector(`#${type}-table .row-future`); // 获取DOM中计算好的下一行
-                const boomPrice = parseFloat(document.getElementById(`${type}-boom-price`).innerText.replace(/[¥$,]/g, ''));
-                
-                if (nextRow) {
-                    const cells = nextRow.querySelectorAll('td');
-                    const nextBuyPrice = parseFloat(cells[2].innerText.replace(/[¥$,]/g, ''));
+            const toast = document.createElement('div');
+            // Tailwind classes for toast
+            const colors = type === 'alert' ? 'bg-red-600' : (type === 'success' ? 'bg-green-600' : 'bg-blue-600');
+            toast.className = `${colors} text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 transition-all duration-500 opacity-0 translate-y-[-20px]`;
+            toast.style.pointerEvents = "auto";
+            toast.innerHTML = `<span>${type === 'alert' ? '🚨' : '🔔'}</span> <span class="font-bold text-sm">${msg}</span>`;
+
+            container.appendChild(toast);
+
+            // Animation In
+            requestAnimationFrame(() => {
+                toast.classList.remove('opacity-0', 'translate-y-[-20px]');
+            });
+
+            // Auto Remove
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-[-20px]');
+                setTimeout(() => toast.remove(), 500);
+            }, 5000);
+        }
+
+        // === 核心逻辑：价格监控与报警 ===
+        function checkPriceAlerts(currentRatio) {
+            // Helper to parse price strings like "$135.00" or "¥25,107"
+            const parseVal = (id) => {
+                const el = document.getElementById(id);
+                if (!el) return null;
+                const txt = el.innerText.replace(/[¥$,\s]/g, '');
+                if (txt === '-' || txt === 'Loading...') return null;
+                return parseFloat(txt);
+            };
+
+            // 1. 金银比检查
+            const targetRatio = parseFloat(document.getElementById('targetRatio').value) || 44;
+            if (currentRatio && currentRatio <= targetRatio) {
+                const msg = `当前金银比 ${currentRatio.toFixed(2)} 已低于设定值 ${targetRatio}`;
+                sendEmailAlert(`🚨 金银比机会提醒: ${currentRatio.toFixed(2)}`, msg, 'ratio');
+                // 仅在首次触发或冷却后弹窗，避免刷屏 (逻辑在 sendEmailAlert 里有冷却，这里 Toast 也可复用)
+                const now = Date.now();
+                if (now - lastAlertTime['ratio'] < 5000) showToast(msg, 'success'); 
+            }
+
+            // 获取实时价格 (Moo = Silver, CN = Estimate)
+            // 注意：fetchPrices 更新了 CONFIG.moo.currentPrice，但我们直接用 currentSilver 变量更直接
+            // 必须确保 fetchPrices 中的 currentSilver 是全局可访问的，或者由参数传入。
+            // 这里的 CONFIG.moo.currentPrice 在 fetchPrices 中被更新了，所以可用。
+            const liveMooPrice = CONFIG.moo.currentPrice; 
+            
+            // 估算国内银价 (简单算法：国际银价 * 7.25汇率 * 32.15盎司/千克)
+            // 为了更准，可以使用 (CN_Input_Price / Moo_Input_Price) 的比例来推算，或者固定汇率。
+            // 鉴于用户可能在平行宇宙，我们用 CONFIG 里的当前价比例来修正？
+            // 不，报警应该基于真实市场。假设汇率 7.3 (保守)
+            const liveCnPrice = liveMooPrice * 7.3 * 32.15; 
+
+            const checks = [
+                { type: 'moo', livePrice: liveMooPrice, name: 'MooMoo' },
+                { type: 'cn', livePrice: liveCnPrice, name: '国内版' }
+            ];
+
+            checks.forEach(c => {
+                if (!c.livePrice) return;
+
+                const boomPrice = parseVal(`${c.type}-boom-price`);
+                const nextPrice = parseVal(`${c.type}-next-price`);
+
+                // A) 爆仓预警 (价格下跌接近爆仓价)
+                // 触发条件：当前价 <= 爆仓价 * 1.02 (2% 缓冲)
+                if (boomPrice && c.livePrice <= boomPrice * 1.02) {
+                    const diff = ((c.livePrice - boomPrice) / boomPrice * 100).toFixed(2);
+                    const msg = `${c.name} 严重风险！当前价 ${c.livePrice.toFixed(2)} 距离爆仓仅剩 ${diff}%`;
+                    sendEmailAlert(`🔥 ${c.name} 爆仓预警`, msg, `${c.type}_boom`);
                     
-                    // 补仓提醒：价格接近下一补仓价 (误差0.5%)
-                    if (curPrice <= nextBuyPrice * 1.005) {
-                        sendEmailAlert(
-                            `📉 ${type.toUpperCase()} 补仓提醒: ${curPrice}`,
-                            `当前价格 ${curPrice} 已接近或低于建议补仓价 ${nextBuyPrice}。请准备操作。`,
-                            `${type}_buy`
-                        );
-                    }
+                    const now = Date.now();
+                    if (now - lastAlertTime[`${c.type}_boom`] < 5000) showToast(msg, 'alert');
                 }
 
-                // 爆仓预警：价格接近爆仓价 (缓冲<5%)
-                if (curPrice <= boomPrice * 1.05) {
-                    sendEmailAlert(
-                        `🔥 ${type.toUpperCase()} 严重风险预警`,
-                        `当前价格 ${curPrice} 距离爆仓价 ${boomPrice} 仅剩不到 5% 的空间！请立即补充保证金！`,
-                        `${type}_boom`
-                    );
+                // B) 补仓提醒 (价格上涨接近下一加仓价)
+                // 触发条件：当前价 >= 下一价 * 0.995 (0.5% 缓冲，即将到达)
+                // 注意：前提是 下一价 > 当前持仓均价 (金字塔加仓逻辑)
+                // 如果是补跌反弹，逻辑可能不同。这里按"上涨触发加仓"逻辑。
+                if (nextPrice && c.livePrice >= nextPrice * 0.995) {
+                    const msg = `${c.name} 加仓机会！当前价 ${c.livePrice.toFixed(2)} 即将到达 ${nextPrice}`;
+                    sendEmailAlert(`📈 ${c.name} 加仓提醒`, msg, `${c.type}_buy`);
+                    
+                    const now = Date.now();
+                    if (now - lastAlertTime[`${c.type}_buy`] < 5000) showToast(msg, 'success');
                 }
             });
         }
