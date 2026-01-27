@@ -587,13 +587,19 @@
              if (!("Notification" in window)) return;
              
              const icon = document.getElementById('alert-icon');
+             if (!icon) return;
+
              if (Notification.permission === "default") {
-                 if(icon) {
-                     icon.classList.add('permission-needed');
-                     icon.title = "点击开启通知权限（强烈建议开启）";
-                 }
+                 icon.classList.add('permission-needed');
+                 icon.classList.remove('active');
+                 icon.title = "点击开启通知权限（强烈建议开启）";
+             } else if (Notification.permission === "granted") {
+                 icon.classList.remove('permission-needed');
+                 icon.classList.add('active'); // 常亮金色，表示监控已就绪
+                 icon.title = "通知权限已开启，监控中...";
              } else {
-                 if(icon) icon.classList.remove('permission-needed');
+                 icon.classList.remove('permission-needed');
+                 icon.classList.remove('active');
              }
         }
 
