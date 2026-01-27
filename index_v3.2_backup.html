@@ -3,9 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>白银期货：动态风控策略计算器 v4.0 (Email监控版)</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    <title>白银期货：动态风控策略计算器 v3.0</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
@@ -325,60 +323,8 @@
             </div>
         </div>
 
-        <!-- 邮件通知配置面板 (v4.0新增) -->
-        <div class="glass-panel mb-6">
-            <div class="flex justify-between items-center mb-4">
-                <div class="flex items-center gap-2">
-                    <span class="text-xl">📧 邮件报警设置</span>
-                    <span id="email-status-icon" class="text-xs px-2 py-0.5 rounded bg-gray-700 text-gray-400">未配置</span>
-                </div>
-                <button onclick="toggleEmailConfig()" class="text-sm text-sky-400 hover:text-sky-300">展开/折叠</button>
-            </div>
-            
-            <div id="emailConfigPanel" class="hidden space-y-3">
-                <div class="text-xs text-gray-400 mb-2">
-                    <p>使用 EmailJS 发送通知。请自行注册 <a href="https://www.emailjs.com/" target="_blank" class="text-sky-400 underline">EmailJS</a> 免费账号。</p>
-                    <p>数据仅保存在您本地浏览器，不会上传服务器。</p>
-                </div>
-                
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs text-gray-500 mb-1">Service ID</label>
-                        <input type="text" id="email_service_id" class="w-full bg-stone-900 border border-stone-700 rounded px-2 py-1 text-sm text-white" placeholder="service_xxx">
-                    </div>
-                    <div>
-                        <label class="block text-xs text-gray-500 mb-1">Template ID</label>
-                        <input type="text" id="email_template_id" class="w-full bg-stone-900 border border-stone-700 rounded px-2 py-1 text-sm text-white" placeholder="template_xxx">
-                    </div>
-                </div>
-                
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs text-gray-500 mb-1">Public Key</label>
-                        <input type="text" id="email_public_key" class="w-full bg-stone-900 border border-stone-700 rounded px-2 py-1 text-sm text-white" placeholder="用户公钥">
-                    </div>
-                    <div>
-                        <label class="block text-xs text-gray-500 mb-1">接收邮箱</label>
-                        <input type="email" id="email_to_address" class="w-full bg-stone-900 border border-stone-700 rounded px-2 py-1 text-sm text-white" placeholder="your@email.com">
-                    </div>
-                </div>
-
-                <div class="flex justify-between items-center pt-2 border-t border-stone-700 mt-2">
-                    <div class="flex items-center gap-2">
-                        <input type="checkbox" id="email_enabled" class="w-4 h-4 rounded bg-stone-800 border-stone-600">
-                        <label for="email_enabled" class="text-sm text-gray-300">启用邮件报警</label>
-                    </div>
-                    <div class="flex gap-2">
-                        <button onclick="saveEmailConfig()" class="px-3 py-1 bg-sky-600 hover:bg-sky-500 text-white rounded text-sm">保存配置</button>
-                        <button onclick="testEmail()" class="px-3 py-1 bg-stone-700 hover:bg-stone-600 text-white rounded text-sm">发送测试邮件</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 资金配置区域 -->
-        <div class="glass-panel mb-6">
-
+        <!-- 核心配置区 -->
+        <div class="config-panel">
             <div class="config-item">
                 <span class="config-label">设定抗跌回撤:</span>
                 <input type="number" id="safetyRate" class="config-input" value="15" step="1" min="5" max="50" onchange="recalc()">
@@ -532,138 +478,6 @@
             moo: 'real'
         };
 
-        // === 邮件报警系统 (v4.0) ===
-        const EMAIL_STORAGE_KEY = 'silver_calc_email_v4';
-        const ALERT_COOLDOWN = 3600 * 1000; // 1小时冷却
-        let lastAlertTime = {
-            ratio: 0,
-            cn_buy: 0,
-            cn_boom: 0,
-            moo_buy: 0,
-            moo_boom: 0
-        };
-
-        function toggleEmailConfig() {
-            const panel = document.getElementById('emailConfigPanel');
-            panel.classList.toggle('hidden');
-        }
-
-        function loadEmailConfig() {
-            const saved = localStorage.getItem(EMAIL_STORAGE_KEY);
-            if (saved) {
-                const cfg = JSON.parse(saved);
-                document.getElementById('email_service_id').value = cfg.service_id || '';
-                document.getElementById('email_template_id').value = cfg.template_id || '';
-                document.getElementById('email_public_key').value = cfg.public_key || '';
-                document.getElementById('email_to_address').value = cfg.to_email || '';
-                document.getElementById('email_enabled').checked = cfg.enabled || false;
-                
-                if (cfg.public_key) emailjs.init(cfg.public_key);
-                updateEmailStatusUI(cfg.enabled);
-            }
-        }
-
-        function saveEmailConfig() {
-            const cfg = {
-                service_id: document.getElementById('email_service_id').value,
-                template_id: document.getElementById('email_template_id').value,
-                public_key: document.getElementById('email_public_key').value,
-                to_email: document.getElementById('email_to_address').value,
-                enabled: document.getElementById('email_enabled').checked
-            };
-            
-            localStorage.setItem(EMAIL_STORAGE_KEY, JSON.stringify(cfg));
-            if (cfg.public_key) emailjs.init(cfg.public_key);
-            updateEmailStatusUI(cfg.enabled);
-            alert("配置已保存！");
-        }
-
-        function updateEmailStatusUI(enabled) {
-            const icon = document.getElementById('email-status-icon');
-            if (enabled) {
-                icon.innerText = "监控中";
-                icon.className = "text-xs px-2 py-0.5 rounded bg-green-900 text-green-300 border border-green-700";
-            } else {
-                icon.innerText = "已禁用";
-                icon.className = "text-xs px-2 py-0.5 rounded bg-gray-700 text-gray-400";
-            }
-        }
-
-        async function sendEmailAlert(subject, message, type) {
-            const cfg = JSON.parse(localStorage.getItem(EMAIL_STORAGE_KEY) || '{}');
-            if (!cfg.enabled || !cfg.service_id || !cfg.template_id) return;
-
-            const now = Date.now();
-            if (now - lastAlertTime[type] < ALERT_COOLDOWN) {
-                console.log(`Alert ${type} is in cooldown.`);
-                return;
-            }
-
-            const templateParams = {
-                to_email: cfg.to_email,
-                subject: subject,
-                message: message,
-                time: new Date().toLocaleString()
-            };
-
-            try {
-                await emailjs.send(cfg.service_id, cfg.template_id, templateParams);
-                console.log("Email sent successfully!");
-                lastAlertTime[type] = now;
-                // 浏览器通知作为辅助
-                new Notification("📧 邮件已发送", { body: subject });
-            } catch (error) {
-                console.error("Email send failed:", error);
-            }
-        }
-
-        function testEmail() {
-            sendEmailAlert("【测试】白银计算器 v4.0", "这是一条测试邮件，说明您的配置正确。", "test");
-            alert("测试请求已发送，请检查控制台或邮箱。");
-        }
-
-        function checkPriceAlerts(currentRatio) {
-            // 1. 金银比检查
-            const targetRatio = parseFloat(document.getElementById('targetRatio').value) || 44;
-            if (currentRatio <= targetRatio) {
-                sendEmailAlert(
-                    `🚨 金银比机会提醒: ${currentRatio.toFixed(2)}`, 
-                    `当前金银比 ${currentRatio.toFixed(2)} 已低于设定值 ${targetRatio}。`, 
-                    'ratio'
-                );
-            }
-
-            // 2. 价格点位检查 (CN & Moo)
-            ['cn', 'moo'].forEach(type => {
-                const curPrice = type === 'cn' ? CONFIG.cn.currentPrice : CONFIG.moo.currentPrice; // 这里需要确保CONFIG里的currentPrice是最新的
-                const nextRow = document.querySelector(`#${type}-table .row-future`); // 获取DOM中计算好的下一行
-                const boomPrice = parseFloat(document.getElementById(`${type}-boom-price`).innerText.replace(/[¥$,]/g, ''));
-                
-                if (nextRow) {
-                    const cells = nextRow.querySelectorAll('td');
-                    const nextBuyPrice = parseFloat(cells[2].innerText.replace(/[¥$,]/g, ''));
-                    
-                    // 补仓提醒：价格接近下一补仓价 (误差0.5%)
-                    if (curPrice <= nextBuyPrice * 1.005) {
-                        sendEmailAlert(
-                            `📉 ${type.toUpperCase()} 补仓提醒: ${curPrice}`,
-                            `当前价格 ${curPrice} 已接近或低于建议补仓价 ${nextBuyPrice}。请准备操作。`,
-                            `${type}_buy`
-                        );
-                    }
-                }
-
-                // 爆仓预警：价格接近爆仓价 (缓冲<5%)
-                if (curPrice <= boomPrice * 1.05) {
-                    sendEmailAlert(
-                        `🔥 ${type.toUpperCase()} 严重风险预警`,
-                        `当前价格 ${curPrice} 距离爆仓价 ${boomPrice} 仅剩不到 5% 的空间！请立即补充保证金！`,
-                        `${type}_boom`
-                    );
-                }
-            });
-        }
-
         // === 金银比实时监控 ===
         let currentGold = 0;
         let currentSilver = 0;
@@ -708,25 +522,6 @@
                 }
 
                 const currentRatio = currentGold / currentSilver;
-
-                // [v4.0] Update Global CONFIG with live prices for alert checking
-                // Note: CN price is estimated based on Moo price if real CN data isn't fetched separately
-                // Assuming a rough exchange rate logic or manual sync, but here we can try to auto-update
-                // if the user wants 'Current Price' to reflect market.
-                // However, user usually inputs their 'Avg Price'. 
-                // Let's just update the 'currentPrice' field in CONFIG for the sake of the alert check logic.
-                
-                CONFIG.moo.currentPrice = currentSilver;
-                // Estimate CN price: Silver * 7.25 * 1000 / 31.1035 (approx conversion) or just ratio
-                // Or better: keep the manual input logic for the TABLE, but use live price for ALERTS.
-                // Actually, let's trust the 'CN' price is derived or fetched. 
-                // Since we don't have a direct CN Futures API here, we'll estimate it:
-                // International Silver ($/oz) * USDCNY (~7.3) / 31.1035 * 1000 = CN Price (Yuan/kg)
-                // Let's use a fixed rate 7.3 for safety, or just ignore CN auto-update if not reliable.
-                // For now, let's update Moo price.
-                
-                // Trigger v4.0 Email Check
-                checkPriceAlerts(currentRatio);
 
                 // 更新历史数据
                 updateHistory(historyData.gold, currentGold);
@@ -1152,10 +947,7 @@
             renderTable('moo');
         }
 
-        window.onload = function() {
-            recalc();
-            loadEmailConfig();
-        };
+        window.onload = recalc;
     </script>
 </body>
 </html>
