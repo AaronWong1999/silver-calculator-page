@@ -180,6 +180,73 @@
         .txt-green { color: #4ade80; }
         .txt-yellow { color: #facc15; }
         .txt-blue { color: #60a5fa; }
+
+        /* === 移动端适配 === */
+        .table-wrapper {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch; /* iOS顺滑滚动 */
+            margin-bottom: 10px;
+            border-radius: 8px;
+            background: rgba(0,0,0,0.1);
+        }
+
+        @media (max-width: 768px) {
+            body { padding: 10px 5px; }
+            h1 { font-size: 22px; margin-top: 5px; }
+            .subtitle { font-size: 12px; margin-bottom: 15px; }
+            .container { padding: 0; }
+            
+            /* Ratio Panel Mobile */
+            .ratio-panel { flex-direction: column; gap: 20px; padding: 15px; }
+            .market-data { width: 100%; justify-content: space-between; gap: 0; }
+            .price-item { width: 48%; text-align: center; }
+            .price-item .price-val { font-size: 20px; }
+            .sparkline { height: 40px; }
+            .ratio-display { width: 100%; margin: 5px 0; }
+            .ratio-val { font-size: 42px; }
+            .ratio-target { width: 100%; justify-content: center; padding: 12px; margin-top: 5px; }
+            .target-input { font-size: 18px; width: 80px; }
+
+            /* Config Panel Mobile */
+            .config-panel { padding: 15px; gap: 12px; }
+            .config-item { 
+                width: 100%; 
+                justify-content: space-between; 
+                background: rgba(0,0,0,0.2); 
+                padding: 10px 15px; 
+                border-radius: 8px; 
+            }
+            .config-label { font-size: 14px; }
+            .config-input { width: 100px; font-size: 16px; height: 36px; } /* 16px防止iOS自动放大 */
+            
+            /* Mode Buttons */
+            .config-item:last-child { background: transparent; padding: 0; gap: 10px; }
+            .mode-btn { flex: 1; padding: 12px 0; font-size: 14px; }
+            
+            /* Section Layout */
+            .strategy-section { padding: 15px; border-radius: 12px; }
+            .section-header { flex-direction: column; align-items: flex-start; gap: 12px; padding-bottom: 12px; margin-bottom: 15px; }
+            .section-title { 
+                font-size: 18px; 
+                width: 100%; 
+                display: flex; 
+                flex-direction: column; 
+                gap: 10px; 
+                align-items: center; 
+            }
+            .scenario-switch { margin-left: 0; width: 100%; justify-content: center; }
+            .scenario-opt { flex: 1; text-align: center; padding: 8px 0; }
+            
+            /* Grid & Tables */
+            .params-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+            .param-box { padding: 10px 5px; }
+            .param-box .value { font-size: 14px; }
+            
+            th, td { padding: 10px 6px; font-size: 12px; white-space: nowrap; }
+            
+            /* Hide non-critical columns on extremely small screens if needed, 
+               but horizontal scroll covers this. */
+        }
     </style>
 </head>
 <body>
@@ -279,15 +346,17 @@
                 <div class="param-box"><div class="label">最终收益</div><div class="value" id="cn-final-equity">-</div></div>
             </div>
             <div class="formula-box" id="cn-formula"></div>
-            <table id="cn-table">
-                <thead>
-                    <tr>
-                        <th>轮次</th><th>状态</th><th>触发价格</th><th>操作</th><th>总持仓</th><th>持仓均价</th><th>账户余额</th>
-                        <th>保本价</th><th>安全垫</th><th>爆仓价</th><th>需补保</th><th>抗跌能力</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
+            <div class="table-wrapper">
+                <table id="cn-table">
+                    <thead>
+                        <tr>
+                            <th>轮次</th><th>状态</th><th>触发价格</th><th>操作</th><th>总持仓</th><th>持仓均价</th><th>账户余额</th>
+                            <th>保本价</th><th>安全垫</th><th>爆仓价</th><th>需补保</th><th>抗跌能力</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
         </div>
 
         <!-- MooMoo版 -->
@@ -310,15 +379,17 @@
                 <div class="param-box"><div class="label">最终收益</div><div class="value" id="moo-final-equity">-</div></div>
             </div>
             <div class="formula-box" id="moo-formula"></div>
-            <table id="moo-table">
-                <thead>
-                    <tr>
-                        <th>轮次</th><th>状态</th><th>触发价格</th><th>操作</th><th>总持仓</th><th>持仓均价</th><th>账户余额</th>
-                        <th>保本价</th><th>安全垫</th><th>爆仓价</th><th>需补保</th><th>抗跌能力</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
+            <div class="table-wrapper">
+                <table id="moo-table">
+                    <thead>
+                        <tr>
+                            <th>轮次</th><th>状态</th><th>触发价格</th><th>操作</th><th>总持仓</th><th>持仓均价</th><th>账户余额</th>
+                            <th>保本价</th><th>安全垫</th><th>爆仓价</th><th>需补保</th><th>抗跌能力</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
         </div>
     </div>
 
