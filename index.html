@@ -78,10 +78,39 @@
         .ratio-target { display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.2); padding: 8px 15px; border-radius: 8px; z-index: 10; }
         .target-input { width: 60px; background: transparent; border: none; border-bottom: 1px solid #94a3b8; color: #fff; text-align: center; font-size: 16px; font-weight: bold; }
         .target-input:focus { outline: none; border-color: #38bdf8; }
+        
+        /* Bell Icon Styles */
+        #alert-icon { 
+            width: 24px; 
+            height: 24px; 
+            cursor: pointer; 
+            transition: all 0.3s;
+            opacity: 0.4;
+        }
+        #alert-icon svg {
+            width: 100%;
+            height: 100%;
+            fill: #94a3b8; /* Default gray */
+        }
+        #alert-icon.active {
+            opacity: 1;
+        }
+        #alert-icon.active svg {
+            fill: #facc15; /* Active Gold */
+        }
+        
         #alert-icon.permission-needed {
-            animation: pulse-yellow 2s infinite;
-            color: #facc15;
             opacity: 1 !important;
+            animation: pulse-bell 2s infinite;
+        }
+        #alert-icon.permission-needed svg {
+            fill: #facc15;
+        }
+
+        @keyframes pulse-bell {
+            0% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(250, 204, 21, 0)); }
+            50% { transform: scale(1.1); filter: drop-shadow(0 0 8px rgba(250, 204, 21, 0.6)); }
+            100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(250, 204, 21, 0)); }
         }
 
         /* 顶部配置栏 */
@@ -281,7 +310,11 @@
             <div class="ratio-target">
                 <span style="font-size: 13px; color: #94a3b8;">提醒阈值:</span>
                 <input type="number" id="targetRatio" class="target-input" value="44" step="0.5" onchange="checkRatio()">
-                <div id="alert-icon" style="opacity: 0.3; cursor: pointer;" onclick="requestNotifyPermission()" title="点击开启弹窗通知">🔔</div>
+                <div id="alert-icon" onclick="requestNotifyPermission()" title="点击开启弹窗通知">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2zm-2 1H8v-6c0-2.48 1.51-4.5 4-4.5s4 2.02 4 4.5v6z"/>
+                    </svg>
+                </div>
             </div>
         </div>
 
@@ -599,17 +632,15 @@
             
             if (currentRatio && currentRatio <= target) {
                 panel.classList.add('alert-active');
-                icon.style.opacity = '1';
-                icon.innerText = '🔔 触发提醒!';
+                icon.classList.add('active'); // Turn gold
                 document.title = `🔔 ${currentRatio.toFixed(2)} - 金银比提醒`;
                 
                 // 触发浏览器通知
                 sendNotification(currentRatio);
             } else {
                 panel.classList.remove('alert-active');
-                icon.style.opacity = '0.3';
-                icon.innerText = '🔔';
-                document.title = '白银期货：动态风控策略计算器 v3.1';
+                icon.classList.remove('active'); // Revert to gray
+                document.title = '白银期货：动态风控策略计算器 v3.2';
             }
         }
 
