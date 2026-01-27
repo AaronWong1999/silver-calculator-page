@@ -529,14 +529,22 @@
                 updateHistory(historyData.ratio, currentRatio);
 
                 // [新增] 保存到本地存储
-                localStorage.setItem('silver_calc_history_v3', JSON.stringify(historyData));
+                try {
+                    localStorage.setItem('silver_calc_history_v3', JSON.stringify(historyData));
+                } catch (e) {
+                    console.warn("LocalStorage failed:", e);
+                }
 
                 updateRatioUI(currentRatio);
                 
                 // 绘制小图表 (传入对应的 label ID)
-                drawSparkline('spark-xau', 'hl-xau', historyData.gold, '#facc15');
-                drawSparkline('spark-xag', 'hl-xag', historyData.silver, '#e2e8f0');
-                drawSparkline('spark-ratio', 'hl-ratio', historyData.ratio, '#38bdf8');
+                try {
+                    drawSparkline('spark-xau', 'hl-xau', historyData.gold, '#facc15');
+                    drawSparkline('spark-xag', 'hl-xag', historyData.silver, '#e2e8f0');
+                    drawSparkline('spark-ratio', 'hl-ratio', historyData.ratio, '#38bdf8');
+                } catch (e) {
+                    console.error("Draw error", e);
+                }
 
             } catch (e) {
                 console.error("Fetch Error:", e);
@@ -558,8 +566,13 @@
             const width = svg.clientWidth || 100;
             const height = svg.clientHeight || 30;
             
-            const min = Math.min(...validData);
-            const max = Math.max(...validData);
+            // Use loop instead of spread for better performance/safety on large arrays
+            let min = validData[0];
+            let max = validData[0];
+            for (let i = 1; i < validData.length; i++) {
+                if (validData[i] < min) min = validData[i];
+                if (validData[i] > max) max = validData[i];
+            }
             
             // 更新 High/Low 标签
             if (document.getElementById(labelId)) {
@@ -630,6 +643,8 @@
         }
 
         function sendNotification(ratio) {
+            if (!("Notification" in window)) return;
+
             const now = Date.now();
             // 5分钟冷却时间 (300,000 ms)
             if (now - lastNotifyTime > 300000) {
@@ -662,7 +677,7 @@
                 panel.classList.remove('alert-active');
                 
                 // 关键修复：如果权限已开启，保持金色图标（表示监控中）；否则变灰
-                if (Notification.permission === "granted") {
+                if ("Notification" in window && Notification.permission === "granted") {
                     icon.classList.add('active');
                 } else {
                     icon.classList.remove('active');
