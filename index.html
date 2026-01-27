@@ -637,15 +637,24 @@
             const icon = document.getElementById('alert-icon');
             
             if (currentRatio && currentRatio <= target) {
+                // 触发警报状态：红色闪烁背景 + 金色图标
                 panel.classList.add('alert-active');
-                icon.classList.add('active'); // Turn gold
+                icon.classList.add('active'); 
                 document.title = `🔔 ${currentRatio.toFixed(2)} - 金银比提醒`;
                 
                 // 触发浏览器通知
                 sendNotification(currentRatio);
             } else {
+                // 安全状态
                 panel.classList.remove('alert-active');
-                icon.classList.remove('active'); // Revert to gray
+                
+                // 关键修复：如果权限已开启，保持金色图标（表示监控中）；否则变灰
+                if (Notification.permission === "granted") {
+                    icon.classList.add('active');
+                } else {
+                    icon.classList.remove('active');
+                }
+                
                 document.title = '白银期货：动态风控策略计算器 v3.2';
             }
         }
