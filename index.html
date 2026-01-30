@@ -755,41 +755,36 @@
 
         async function fetchPrices() {
             try {
-                // 使用 Binance Futures API
-                const [goldRes, silverRes] = await Promise.all([
-                    fetch('https://fapi.binance.com/fapi/v1/ticker/price?symbol=XAUUSDT'),
-                    fetch('https://fapi.binance.com/fapi/v1/ticker/price?symbol=XAGUSDT')
-                ]);
+                // 优先尝试 Binance Futures API (通常最准)
+                try {
+                    const [goldRes, silverRes] = await Promise.all([
+                        fetch('https://fapi.binance.com/fapi/v1/ticker/price?symbol=XAUUSDT'),
+                        fetch('https://fapi.binance.com/fapi/v1/ticker/price?symbol=XAGUSDT')
+                    ]);
+                    
+                    if (!goldRes.ok || !silverRes.ok) throw new Error("Binance API Error");
 
-                const goldData = await goldRes.json();
-                const silverData = await silverRes.json();
+                    const goldData = await goldRes.json();
+                    const silverData = await silverRes.json();
 
-                currentGold = parseFloat(goldData.price);
-                currentSilver = parseFloat(silverData.price);
+                    currentGold = parseFloat(goldData.price);
+                    currentSilver = parseFloat(silverData.price);
+
+                } catch (binanceError) {
+                    console.warn("Binance API failed, trying fallback...", binanceError);
+                    // 备用源: GoldPrice.org
+                    await fetchBackupPrices();
+                }
 
                 if (isNaN(currentGold) || currentGold <= 0 || isNaN(currentSilver) || currentSilver <= 0) {
-                    throw new Error("Invalid price data");
+                    throw new Error("Invalid price data from all sources");
                 }
 
                 const currentRatio = currentGold / currentSilver;
 
-                // [v4.0] Update Global CONFIG with live prices for alert checking
-                // Note: CN price is estimated based on Moo price if real CN data isn't fetched separately
-                // Assuming a rough exchange rate logic or manual sync, but here we can try to auto-update
-                // if the user wants 'Current Price' to reflect market.
-                // However, user usually inputs their 'Avg Price'. 
-                // Let's just update the 'currentPrice' field in CONFIG for the sake of the alert check logic.
-                
+                // [v4.0] Update Global CONFIG
                 CONFIG.moo.currentPrice = currentSilver;
-                // Estimate CN price: Silver * 7.25 * 1000 / 31.1035 (approx conversion) or just ratio
-                // Or better: keep the manual input logic for the TABLE, but use live price for ALERTS.
-                // Actually, let's trust the 'CN' price is derived or fetched. 
-                // Since we don't have a direct CN Futures API here, we'll estimate it:
-                // International Silver ($/oz) * USDCNY (~7.3) / 31.1035 * 1000 = CN Price (Yuan/kg)
-                // Let's use a fixed rate 7.3 for safety, or just ignore CN auto-update if not reliable.
-                // For now, let's update Moo price.
                 
-                // Trigger v4.0 Email Check
                 checkPriceAlerts(currentRatio);
 
                 // 更新历史数据
@@ -806,7 +801,6 @@
 
                 updateRatioUI(currentRatio);
                 
-                // 绘制小图表 (传入对应的 label ID)
                 try {
                     drawSparkline('spark-xau', 'hl-xau', historyData.gold, '#facc15');
                     drawSparkline('spark-xag', 'hl-xag', historyData.silver, '#e2e8f0');
@@ -818,6 +812,27 @@
             } catch (e) {
                 console.error("Fetch Error:", e);
                 document.getElementById('ratio-val').innerText = "Err";
+            }
+        }
+
+        async function fetchBackupPrices() {
+            try {
+                // GoldPrice.org API (Usually stable, provides XAU/XAG in USD)
+                const res = await fetch('https://data-asg.goldprice.org/dbXRates/USD');
+                if (!res.ok) throw new Error("Backup API Error");
+                
+                const data = await res.json();
+                // data format: { items: [{ curr: "USD", xauPrice: 2720.5, xagPrice: 32.15, ... }] }
+                if (data.items && data.items.length > 0) {
+                    currentGold = data.items[0].xauPrice;
+                    currentSilver = data.items[0].xagPrice;
+                    console.log("Used Backup API data");
+                } else {
+                    throw new Error("Invalid Backup API format");
+                }
+            } catch (e) {
+                console.error("Backup API failed:", e);
+                throw e; // Let main catch handle it
             }
         }
 
