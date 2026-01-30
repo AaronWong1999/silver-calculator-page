@@ -1120,11 +1120,26 @@
             
             let principal = type === 'cn' ? parseFloat(document.getElementById('cnPrincipal').value) : parseFloat(document.getElementById('mooPrincipal').value);
 
+            // [逻辑优化] 先重置标签为默认状态 (防止从"已清仓"切换回"理想"模式时标签未复原)
+            document.querySelector(`#${type}-boom-price`).previousElementSibling.innerText = "爆仓价格";
+            document.querySelector(`#${type}-next-price`).previousElementSibling.innerText = "下个加仓价";
+            document.querySelector(`#${type}-final-equity`).previousElementSibling.innerText = "最终收益";
+            document.getElementById(`${type}-boom-price`).className = "value danger";
+            document.getElementById(`${type}-next-price`).className = "value highlight";
+            document.getElementById(`${type}-final-equity`).className = "value";
+            document.getElementById(`${type}-status`).innerHTML = ``;
+
+            // 检测是否为"已清仓/完结"状态 (仅在现实模式且持仓为0时)
+            let isCleared = (mode === 'real' && CONFIG[type].currentLots === 0);
+
             let html = '';
             let finalRow = null;
             let nextAction = null;
 
             dataset.forEach((row, idx) => {
+                // 如果已清仓，不再显示未来的推演数据
+                if (isCleared && row.type === 'future') return;
+
                 if (idx > 0 && row.price === dataset[idx-1].price && row.lots === dataset[idx-1].lots) return;
 
                 let cur = type === 'cn' ? '¥' : '$';
@@ -1132,37 +1147,51 @@
                 let isCurrent = row.type === 'current';
                 
                 // 保本价计算: BreakEven = Price - (Equity - Principal) / (Lots * Size)
-                let breakEven = row.price - (row.equity - principal) / (row.lots * CONFIG[type].contractSize);
-                let cushion = (row.price - breakEven) / row.price * 100;
-                
-                // 检查：如果保本价 < 爆仓价，说明利润极厚，即使爆仓，剩余资金也大于本金。
-                let isSuperSafe = breakEven < risk.boomPrice;
-                
-                let breakEvenHtml = '';
-                if (isSuperSafe) {
-                    // 这种情况下，保本已不是问题，问题是保利润。
-                    breakEvenHtml = `<span style="font-weight:bold; color:#4ade80;">${cur}${breakEven.toLocaleString(undefined, {maximumFractionDigits: type==='cn'?0:2})}</span><br><span style="font-size:10px; color:#4ade80;">✅ 爆仓亦保本</span>`;
-                } else {
-                    breakEvenHtml = `<span style="font-weight:bold; color:${cushion>=0 ? '#fbbf24' : '#ef4444'}">${cur}${breakEven.toLocaleString(undefined, {maximumFractionDigits: type==='cn'?0:2})}</span>`;
-                }
+                let breakEven = 0;
+                let cushion = 0;
+                let breakEvenHtml = '-';
+                let cushionTxt = '-';
 
-                let cushionTxt = cushion >= 0 ? 
-                    `<span class="txt-green">🛡️ ${cushion.toFixed(1)}%</span>` : 
-                    `<span class="txt-red">🚨 ${cushion.toFixed(1)}%</span>`;
+                // 处理 0 持仓的情况 (避免除以零)
+                if (row.lots > 0) {
+                    breakEven = row.price - (row.equity - principal) / (row.lots * CONFIG[type].contractSize);
+                    cushion = (row.price - breakEven) / row.price * 100;
+
+                    // 检查：如果保本价 < 爆仓价，说明利润极厚
+                    let isSuperSafe = breakEven < risk.boomPrice;
+                    
+                    if (isSuperSafe) {
+                        breakEvenHtml = `<span style="font-weight:bold; color:#4ade80;">${cur}${breakEven.toLocaleString(undefined, {maximumFractionDigits: type==='cn'?0:2})}</span><br><span style="font-size:10px; color:#4ade80;">✅ 爆仓亦保本</span>`;
+                    } else {
+                        breakEvenHtml = `<span style="font-weight:bold; color:${cushion>=0 ? '#fbbf24' : '#ef4444'}">${cur}${breakEven.toLocaleString(undefined, {maximumFractionDigits: type==='cn'?0:2})}</span>`;
+                    }
+
+                    cushionTxt = cushion >= 0 ? 
+                        `<span class="txt-green">🛡️ ${cushion.toFixed(1)}%</span>` : 
+                        `<span class="txt-red">🚨 ${cushion.toFixed(1)}%</span>`;
+                } else {
+                     breakEvenHtml = '<span style="color:#6b7280">-</span>';
+                     cushionTxt = '<span style="color:#6b7280">-</span>';
+                }
 
                 let rowClass = isCurrent ? 'row-current' : (mode === 'ideal' ? 'row-ideal' : 'row-future');
                 if (row.type === 'history') rowClass = 'row-history';
                 if (row.note === '立即加仓') rowClass = 'row-trigger';
+                if (row.lots === 0 && row.type === 'history') rowClass = 'row-trigger'; // 清仓行高亮
 
-                let mcTxt = risk.marginCall > 0 ? 
+                let mcTxt = (row.lots > 0 && risk.marginCall > 0) ? 
                     `<span class="txt-red">+${cur}${Math.round(risk.marginCall).toLocaleString()}</span>` : 
-                    `<span class="txt-green">✔</span>`;
+                    (row.lots > 0 ? `<span class="txt-green">✔</span>` : `-`);
+
+                let boomTxt = (row.lots > 0) ? `${cur}${risk.boomPrice.toLocaleString(undefined, {maximumFractionDigits: type==='cn'?0:2})}` : `-`;
+                let safeTxt = (row.lots > 0) ? `${risk.safePercent.toFixed(1)}%` : `-`;
+                let safeClass = (row.lots > 0 && risk.safePercent < safetyRate) ? 'txt-red' : 'txt-green';
 
                 html += `<tr class="${rowClass}">
                     <td>${typeof row.round === 'number' ? row.round : '-'}</td>
                     <td>${isCurrent ? '当前' : (row.type === 'history' ? '已执行' : (row.price <= CONFIG[type].currentPrice && mode === 'real' ? '已过' : '待执行'))}</td>
                     <td>${cur}${row.price.toLocaleString(undefined, {maximumFractionDigits: type==='cn'?0:2})}</td>
-                    <td>${row.type==='current' ? '持仓' : (row.type==='history' ? '持有'+row.lots+'手' : '开第'+row.lots+'手')}</td>
+                    <td>${row.type==='current' ? '持仓' : (row.type==='history' ? (row.lots===0?'清仓':'持有'+row.lots+'手') : '开第'+row.lots+'手')}</td>
                     <td>${row.lots}手</td>
                     <td class="txt-blue">${cur}${row.avgPrice.toLocaleString(undefined, {maximumFractionDigits: type==='cn'?0:2})}</td>
                     <td>${cur}${Math.round(row.equity).toLocaleString()}</td>
@@ -1170,9 +1199,9 @@
                     <td>${breakEvenHtml}</td>
                     <td>${cushionTxt}</td>
 
-                    <td class="txt-red">${cur}${risk.boomPrice.toLocaleString(undefined, {maximumFractionDigits: type==='cn'?0:2})}</td>
+                    <td class="txt-red">${boomTxt}</td>
                     <td>${mcTxt}</td>
-                    <td class="${risk.safePercent < safetyRate ? 'txt-red' : 'txt-green'}">${risk.safePercent.toFixed(1)}%</td>
+                    <td class="${safeClass}">${safeTxt}</td>
                 </tr>`;
 
                 finalRow = row;
@@ -1182,13 +1211,41 @@
             document.querySelector(`#${type}-table tbody`).innerHTML = html;
             
             let cur = type === 'cn' ? '¥' : '$';
-            let currRisk = calcRisk(type, mode==='real'?CONFIG[type].currentPrice:CONFIG[type].startPrice, mode==='real'?CONFIG[type].currentEquity:CONFIG[type].startEquity, mode==='real'?CONFIG[type].currentLots:CONFIG[type].startLots, safetyRate);
-            
-            document.getElementById(`${type}-curr-lots`).innerText = (mode==='real'?CONFIG[type].currentLots:CONFIG[type].startLots) + '手';
-            document.getElementById(`${type}-curr-equity`).innerText = cur + Math.round(mode==='real'?CONFIG[type].currentEquity:CONFIG[type].startEquity).toLocaleString();
-            document.getElementById(`${type}-boom-price`).innerText = cur + currRisk.boomPrice.toLocaleString(undefined, {maximumFractionDigits: type==='cn'?0:2});
-            document.getElementById(`${type}-next-price`).innerText = nextAction ? cur + nextAction.price.toLocaleString(undefined, {maximumFractionDigits: type==='cn'?0:2}) : '已通关';
-            document.getElementById(`${type}-final-equity`).innerText = cur + Math.round(finalRow.equity).toLocaleString();
+
+            if (isCleared) {
+                // === 完结状态面板展示 ===
+                document.getElementById(`${type}-curr-lots`).innerText = "🏁 已落袋";
+                document.getElementById(`${type}-curr-equity`).innerText = cur + Math.round(CONFIG[type].currentEquity).toLocaleString();
+                
+                // 初始投入
+                document.querySelector(`#${type}-boom-price`).previousElementSibling.innerText = "初始投入";
+                document.getElementById(`${type}-boom-price`).innerText = cur + principal.toLocaleString();
+                document.getElementById(`${type}-boom-price`).className = "value"; // 移除警告色
+
+                // 绝对收益
+                document.querySelector(`#${type}-next-price`).previousElementSibling.innerText = "绝对收益";
+                let profit = CONFIG[type].currentEquity - principal;
+                document.getElementById(`${type}-next-price`).innerText = (profit>=0?"+":"") + cur + profit.toLocaleString(undefined, {maximumFractionDigits: 2});
+                document.getElementById(`${type}-next-price`).className = `value ${profit>=0 ? 'txt-green' : 'txt-red'}`;
+
+                // 总回报率
+                document.querySelector(`#${type}-final-equity`).previousElementSibling.innerText = "总回报率";
+                let roi = (profit / principal) * 100;
+                document.getElementById(`${type}-final-equity`).innerText = roi.toFixed(1) + "%";
+                document.getElementById(`${type}-final-equity`).className = `value ${profit>=0 ? 'txt-green' : 'txt-red'}`;
+
+                document.getElementById(`${type}-status`).innerHTML = `<span class="txt-green font-bold">✅ 策略已完成 (Game Over)</span>`;
+
+            } else {
+                // === 正常进行状态 ===
+                let currRisk = calcRisk(type, mode==='real'?CONFIG[type].currentPrice:CONFIG[type].startPrice, mode==='real'?CONFIG[type].currentEquity:CONFIG[type].startEquity, mode==='real'?CONFIG[type].currentLots:CONFIG[type].startLots, safetyRate);
+                
+                document.getElementById(`${type}-curr-lots`).innerText = (mode==='real'?CONFIG[type].currentLots:CONFIG[type].startLots) + '手';
+                document.getElementById(`${type}-curr-equity`).innerText = cur + Math.round(mode==='real'?CONFIG[type].currentEquity:CONFIG[type].startEquity).toLocaleString();
+                document.getElementById(`${type}-boom-price`).innerText = cur + currRisk.boomPrice.toLocaleString(undefined, {maximumFractionDigits: type==='cn'?0:2});
+                document.getElementById(`${type}-next-price`).innerText = nextAction ? cur + nextAction.price.toLocaleString(undefined, {maximumFractionDigits: type==='cn'?0:2}) : '已通关';
+                document.getElementById(`${type}-final-equity`).innerText = cur + Math.round(finalRow.equity).toLocaleString();
+            }
         }
 
         function setMode(val) {
