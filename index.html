@@ -1043,6 +1043,23 @@
 
                 if (nextPrice <= p) nextPrice = p;
 
+                // [v4.1] Check Limit BEFORE pushing
+                let limit = (type === 'cn') ? 30400 : 135;
+                if (nextPrice > limit) {
+                    // Reached limit before needing to add position
+                    let finalEq = eq + (limit - p) * lots * sz;
+                    data.push({
+                        round: '-',
+                        type: 'future',
+                        price: limit,
+                        equity: finalEq,
+                        lots: lots,
+                        avgPrice: avg,
+                        note: '目标止盈'
+                    });
+                    break;
+                }
+
                 // 更新余额
                 let newEq = eq + (nextPrice - p) * lots * sz;
 
@@ -1065,9 +1082,6 @@
                 eq = newEq;
                 lots = nextLots;
                 avg = newAvg;
-
-                if (type === 'cn' && p > 30400) break;
-                if (type === 'moo' && p > 135) break;
             }
             return data;
         }
