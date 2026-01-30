@@ -391,7 +391,7 @@
             </div>
             <div class="config-item">
                 <span class="config-label">MooMoo保证金:</span>
-                <input type="number" id="mooMarginRate" class="config-input" value="12.58" step="0.01" onchange="recalc()">
+                <input type="number" id="mooMarginRate" class="config-input" value="12.66" step="0.01" onchange="recalc()">
                 <span class="config-label">%</span>
             </div>
             <div class="config-item">
@@ -510,7 +510,8 @@
                 { round: 3, price: 101.365, lots: 4, equity: 93895, note: "高位追涨" },
                 { round: 4, price: 109.1, lots: 5, equity: 124835, note: "动态加仓" },
                 { round: 5, price: 115.995, lots: 6, equity: 159310, note: "高位加仓" },
-                { round: 6, price: 120.97, lots: 7, equity: 151341.13, note: "跟随加仓" }
+                { round: 6, price: 120.97, lots: 7, equity: 151341.13, note: "跟随加仓" },
+                { round: 7, price: 109.1, lots: 6, equity: 107288.12, note: "避险减仓" }
             ]
         };
 
@@ -524,9 +525,9 @@
 
             moo: {
                 startPrice: 69.00, startEquity: 12984, startLots: 1,
-                currentPrice: 110.13, currentEquity: 112911.13, currentLots: 7, currentAvgPrice: 98.635,
-                marginRate: 0.1258, contractSize: 1000,
-                boomCoef: 0.8742
+                currentPrice: 109.365, currentEquity: 107288.12, currentLots: 6, currentAvgPrice: 98.635,
+                marginRate: 0.1266, contractSize: 1000,
+                boomCoef: 0.8734
             }
         };
 
